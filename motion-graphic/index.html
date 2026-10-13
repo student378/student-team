@@ -1,0 +1,1249 @@
+<title>말로 만든 학생 서비스 4종</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gothic+A1:wght@400;500;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: 16:9 무대(1600×900 기준 좌표)를 화면 폭에 맞춰 축소 + 아래 자막·컨트롤·장면 목록·전체 대본.
+   무대 바탕은 '구글 시트 격자' — 4개 앱의 데이터 저장소. 앱마다 고유 색, 사람=밝은 크림, AI=연보라. */
+:root{
+  --bg:#0B1830; --stage:#0F2242; --panel:#16305A; --panel2:#1D3B6C; --ink:#F4F0E8; --muted:#A9B7CC; --line:#2C4B7B;
+  --bot:#86A9F5; --well:#4FC7A6; --bf:#F2B84B; --store:#F48C5C; --ai:#C7B5FF; --me:#F4F0E8;
+  --ok:#5BD08A; --bad:#FF8A80; --dark:#0B1830;
+  --display:"Do Hyeon","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --body:"Gothic A1","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --mono:"IBM Plex Mono","D2Coding",Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--body);font-size:16px;line-height:1.6;padding-inline:16px;padding-block:20px 48px}
+button{font:inherit;color:inherit}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:18px}
+.pagehead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:end;gap:8px 20px}
+.pagehead h1{font-family:var(--display);font-weight:400;font-size:clamp(24px,3.4vw,34px);margin:0;line-height:1.2;text-wrap:balance}
+.pagehead p{margin:0;color:var(--muted);font-size:14px}
+
+/* ── 플레이어 ── */
+.player{display:grid;gap:0;background:var(--stage);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.viewport{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:var(--stage)}
+.stage{position:absolute;left:0;top:0;width:1600px;height:900px;transform-origin:0 0;font-size:28px;line-height:1.5;
+  background-color:var(--stage);
+  background-image:linear-gradient(rgba(134,169,245,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(134,169,245,.07) 1px,transparent 1px);
+  background-size:200px 50px;background-position:-1px -1px}
+.player:fullscreen{display:flex;flex-direction:column;border-radius:0;border:0}
+.player:fullscreen .viewport{flex:1;aspect-ratio:auto}
+
+.caption{min-height:96px;padding:16px 20px;border-top:1px solid var(--line);background:var(--panel);display:grid;gap:4px;align-content:start}
+.caption .cap-scene{font-size:12.5px;font-weight:700;letter-spacing:.08em;color:var(--muted)}
+.caption .cap-text{font-size:clamp(16px,1.9vw,20px);line-height:1.6;font-weight:500;text-wrap:pretty}
+.ctrls{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;padding:12px 16px;border-top:1px solid var(--line);background:var(--stage)}
+.btn{display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-size:14px;font-weight:600;white-space:nowrap}
+.btn:hover{background:var(--panel2)}
+.btn:focus-visible,.scrub:focus-visible,.chap-btn:focus-visible{outline:2px solid var(--bf);outline-offset:2px}
+.btn.primary{background:var(--bf);color:var(--dark);border-color:var(--bf)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn[aria-pressed="true"]{background:var(--ai);color:var(--dark);border-color:var(--ai)}
+.btn svg{width:18px;height:18px;fill:currentColor;flex:none}
+.time{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:96px}
+.spacer{flex:1}
+.scrub{position:relative;height:28px;flex:1 1 100%;cursor:pointer;touch-action:none;order:-1}
+.scrub .track{position:absolute;left:0;right:0;top:12px;height:5px;border-radius:3px;background:var(--line)}
+.scrub .fill{position:absolute;left:0;top:12px;height:5px;border-radius:3px;background:var(--bf);width:0}
+.scrub .tick{position:absolute;top:8px;width:2px;height:13px;background:var(--muted);opacity:.55;border-radius:1px}
+.scrub .knob{position:absolute;top:6px;width:16px;height:16px;margin-left:-8px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 3px var(--stage)}
+.voice-note{font-size:13px;color:var(--muted);flex:1 1 100%}
+.voice-note:empty{display:none}
+
+.chapters{display:flex;flex-wrap:wrap;gap:6px}
+.chap-btn{border:1px solid var(--line);background:var(--stage);color:var(--muted);border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer}
+.chap-btn .n{font-family:var(--mono);font-size:11.5px;margin-right:6px;opacity:.8}
+.chap-btn.on{background:var(--ink);color:var(--dark);border-color:var(--ink)}
+
+.script{background:var(--stage);border:1px solid var(--line);border-radius:14px;padding:22px clamp(16px,3vw,32px);display:grid;gap:18px}
+.script h2{font-family:var(--display);font-weight:400;font-size:26px;margin:0}
+.script > p{margin:0;color:var(--muted);font-size:14.5px;max-width:70ch}
+.script ol{list-style:none;margin:0;padding:0;display:grid;gap:18px}
+.script li{display:grid;gap:6px;border-left:3px solid var(--line);padding-left:16px;min-width:0}
+.script li h3{margin:0;font-size:17px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.script li h3 button{border:0;background:none;padding:0;cursor:pointer;color:var(--bf);font-family:var(--mono);font-size:13px;text-decoration:underline;text-underline-offset:3px}
+.script li p{margin:0;color:var(--ink);opacity:.9;font-size:15px;max-width:72ch}
+footer{color:var(--muted);font-size:13px}
+
+/* ── 무대 공통 ── */
+.hud{position:absolute;left:0;right:0;top:0;height:64px;display:flex;justify-content:space-between;align-items:center;padding:0 96px;font-size:17px;color:var(--muted);z-index:5}
+.hud b{color:var(--ink);font-weight:700}
+.hud .hud-r{font-family:var(--mono);font-size:16px}
+.scene-bar{position:absolute;left:0;bottom:0;height:6px;background:var(--bf);width:0;z-index:5}
+.sc{position:absolute;inset:0;padding:92px 96px 60px;opacity:0;visibility:hidden;transition:opacity .5s,visibility 0s .5s;display:flex;flex-direction:column;gap:26px}
+.sc.cur{opacity:1;visibility:visible;transition:opacity .5s}
+.chap{font-family:var(--mono);font-size:20px;color:var(--bf);letter-spacing:.06em;font-weight:600}
+.ttl{font-family:var(--display);font-size:58px;line-height:1.15;margin:0;font-weight:400;text-wrap:balance}
+.sub{font-size:27px;color:var(--muted);margin:0;max-width:1300px}
+.head{display:grid;gap:8px}
+.em-bf{color:var(--bf)}.em-well{color:var(--well)}.em-store{color:var(--store)}.em-bot{color:var(--bot)}.em-ai{color:var(--ai)}
+.badge{display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:7px;font-size:19px;font-weight:800;letter-spacing:.04em;white-space:nowrap}
+.b-me{background:var(--me);color:var(--dark)}
+.b-ai{background:var(--ai);color:var(--dark)}
+.tag{display:inline-flex;align-items:center;gap:10px;padding:8px 16px;border-radius:999px;border:2px solid var(--line);font-size:22px;font-weight:700;background:var(--panel)}
+.dot{width:16px;height:16px;border-radius:50%;background:var(--c);flex:none;display:inline-block}
+.card{background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:26px 28px;display:grid;gap:12px;align-content:start;min-width:0}
+.mono{font-family:var(--mono)}
+.note{font-size:19px;color:var(--muted)}
+.quote{font-size:24px;line-height:1.55}
+.quote::before{content:"“";color:var(--muted)}.quote::after{content:"”";color:var(--muted)}
+.checks{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.checks li{display:grid;grid-template-columns:36px minmax(0,1fr);gap:12px;font-size:24px;line-height:1.4;align-items:start}
+.checks li::before{content:"";width:30px;height:30px;margin-top:3px;border-radius:50%;background:var(--c,var(--ok)) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='%230B1830' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/20px no-repeat}
+.arrow{font-family:var(--display);font-size:46px;color:var(--muted);line-height:1}
+
+/* 등장 효과: data-at(초)에 'in' 클래스가 붙는다. data-to가 있으면 그 시각에 빠진다. */
+[data-at]{opacity:0;transform:translateY(26px);transition:opacity .55s ease,transform .7s cubic-bezier(.2,.8,.2,1)}
+[data-at].in{opacity:1;transform:none}
+[data-at].fx-pop{transform:scale(.86)}
+[data-at].fx-left{transform:translateX(-40px)}
+[data-at].fx-right{transform:translateX(40px)}
+[data-at].fx-fade{transform:none}
+[data-at].fx-pop.in,[data-at].fx-left.in,[data-at].fx-right.in{transform:none}
+[data-at].fx-wipe{opacity:1;transform:none;clip-path:inset(0 100% 0 0);transition:clip-path .9s cubic-bezier(.4,0,.2,1)}
+[data-at].fx-wipe.in{clip-path:inset(0 0 0 0)}
+[data-at].fx-state{opacity:1;transform:none}
+svg [data-at]{transform:none}
+.stag > *{opacity:0;transform:translateY(18px);transition:opacity .5s ease,transform .6s cubic-bezier(.2,.8,.2,1);transition-delay:calc(var(--k,0) * .18s)}
+.stag.in > *{opacity:1;transform:none}
+.draw{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);transition:stroke-dashoffset 1.4s ease}
+.draw.in{stroke-dashoffset:0}
+.hl{transition:background-color .5s, box-shadow .5s, color .5s;border-radius:6px}
+.caret::after{content:"";display:inline-block;width:3px;height:1em;background:currentColor;margin-left:3px;vertical-align:-3px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+@keyframes dash{to{stroke-dashoffset:-32}}
+@keyframes travel{0%{left:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{left:calc(100% - 18px);opacity:0}}
+@keyframes travelback{0%{left:calc(100% - 18px);opacity:0}10%{opacity:1}90%{opacity:1}100%{left:0;opacity:0}}
+@keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-8px);opacity:1}}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(242,184,75,.55)}100%{box-shadow:0 0 0 22px rgba(242,184,75,0)}}
+
+/* ── 장면별 ── */
+/* 표지 */
+.cover{justify-content:center;gap:34px}
+.cover .eyebrow{font-size:24px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
+.cover h2{font-family:var(--display);font-weight:400;font-size:104px;line-height:1.1;margin:0;letter-spacing:-.01em}
+.cover h2 .k{color:var(--bf)}
+.cover-apps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+.appchip{background:var(--panel);border:2px solid var(--line);border-top:8px solid var(--c);border-radius:14px;padding:18px 20px;display:grid;gap:4px}
+.appchip b{font-family:var(--display);font-weight:400;font-size:38px;color:var(--c);line-height:1.2}
+.appchip span{font-size:20px;color:var(--muted)}
+.tools{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.tools .lbl{font-size:21px;color:var(--muted);margin-right:6px}
+.tools .free{font-size:20px;font-weight:800;color:var(--dark);background:var(--ok);border-radius:6px;padding:4px 12px;margin-left:6px}
+
+/* 목차 */
+.agenda{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 40px;margin-top:10px}
+.agenda > div{display:grid;grid-template-columns:72px minmax(0,1fr);align-items:center;gap:16px;padding:14px 0;border-bottom:2px solid var(--line)}
+.agenda .n{font-family:var(--mono);font-size:30px;color:var(--bf);font-weight:600}
+.agenda b{font-size:32px;font-weight:700}
+.agenda span{display:block;font-size:20px;color:var(--muted);font-weight:500}
+
+/* AI 3역할 */
+.roles{position:relative;display:grid;grid-template-columns:minmax(0,1fr) 70px minmax(0,1fr) 70px minmax(0,1fr);align-items:stretch;margin-top:8px}
+.roles .card{gap:14px;padding:28px}
+.roles .card .big{font-family:var(--display);font-size:46px;line-height:1.15}
+.roles .card p{margin:0;font-size:22px;color:var(--muted);line-height:1.5}
+.roles .card p b{color:var(--ink)}
+.roles .arrow{align-self:center;text-align:center}
+.loop{position:absolute;left:0;top:100%;width:100%;height:120px;overflow:visible}
+.loop-lbl{position:absolute;left:50%;top:calc(100% + 78px);transform:translateX(-50%);font-size:23px;font-weight:700;color:var(--bf);white-space:nowrap}
+.loop-lbl.in{transform:translateX(-50%)}
+
+/* 채팅 + 정렬 예시 */
+.chat-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:36px;align-items:start}
+.chatbox{background:var(--panel);border:2px solid var(--line);border-radius:18px;padding:24px;display:grid;gap:16px;min-height:520px;align-content:start}
+.bub{max-width:92%;padding:16px 20px;border-radius:18px;font-size:23px;line-height:1.55}
+.bub .who{display:block;font-size:16px;font-weight:800;letter-spacing:.06em;opacity:.75;margin-bottom:4px}
+.bub.me{justify-self:end;background:var(--me);color:var(--dark);border-bottom-right-radius:4px}
+.bub.ai{justify-self:start;background:var(--panel2);border:2px solid var(--ai);border-bottom-left-radius:4px}
+.typing:not(.in){display:none}
+.typing{justify-self:start;display:flex;gap:8px;padding:18px 22px;background:var(--panel2);border-radius:18px}
+.typing i{width:12px;height:12px;border-radius:50%;background:var(--ai);animation:bounce 1.2s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+.mock{background:#F7F5EF;color:#1A2333;border-radius:16px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.mock-top{display:flex;justify-content:space-between;align-items:center;padding:16px 22px;background:#1A2333;color:#F7F5EF;font-size:21px;font-weight:700}
+.mock-top small{font-size:15px;font-weight:500;color:#C9D2E0}
+.sortbar{display:flex;gap:8px;padding:14px 22px;border-bottom:1px solid #DCD8CC}
+.sortbar span{padding:6px 16px;border-radius:999px;font-size:18px;font-weight:700;border:2px solid #C8C3B4;color:#5A6474}
+.sortbar .s-old{background:#1A2333;color:#fff;border-color:#1A2333}
+.sorted .sortbar .s-old{background:transparent;color:#5A6474;border-color:#C8C3B4}
+.sorted .sortbar .s-new{background:#C77700;color:#fff;border-color:#C77700}
+.rows{position:relative;height:396px}
+.row{position:absolute;left:0;right:0;top:calc(var(--i) * 66px);height:66px;display:grid;grid-template-columns:90px 110px minmax(0,1fr) 110px;align-items:center;padding:0 22px;border-bottom:1px solid #E4E0D5;font-size:19px;transition:top .8s cubic-bezier(.6,0,.2,1),background .6s}
+.sorted .row{top:calc(var(--j) * 66px)}
+.withnew .row{top:calc((var(--j) + 1) * 66px)}
+.withnew .row.new{top:0;background:#FFF1D6}
+.row .no{font-family:var(--mono);font-weight:600;color:#7A8394}
+.row .tm{font-family:var(--mono);color:#3A4456}
+.row .st{justify-self:end;font-size:16px;font-weight:700;padding:3px 10px;border-radius:5px;background:#E6F4EA;color:#1F7A3E}
+.row .st.wait{background:#FDECC8;color:#8A5300}
+.row.new{opacity:0;transition:top .8s cubic-bezier(.6,0,.2,1),opacity .6s}
+.withnew .row.new{opacity:1}
+.mock-cap{font-size:17px;color:var(--muted);margin-top:10px}
+
+/* 제작 순서 */
+.rail{position:relative;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:10px}
+.rail::before{content:"";position:absolute;left:5%;right:5%;top:33px;height:4px;background:var(--line)}
+.node{position:relative;display:grid;justify-items:center;gap:8px;text-align:center}
+.node .c{width:70px;height:70px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-size:28px;font-weight:600;background:var(--stage);border:4px solid var(--muted);position:relative;z-index:1;transition:all .4s}
+.node.ai .c{border-color:var(--ai)}
+.node.me .c{border-color:var(--me)}
+.node .lb{font-size:19px;font-weight:700;line-height:1.3;color:var(--muted)}
+.node .ring{position:absolute;top:0;left:50%;width:70px;height:70px;margin-left:-35px;border-radius:50%;background:var(--bf);z-index:2;display:grid;place-items:center;font-family:var(--mono);font-size:28px;font-weight:600;color:var(--dark);animation:pulse 1.4s infinite}
+.panels{position:relative;flex:1}
+.panel{position:absolute;inset:0;background:var(--panel);border:2px solid var(--line);border-radius:18px;padding:30px 36px;display:grid;grid-template-rows:auto auto 1fr;gap:16px}
+.panel h3{margin:0;font-family:var(--display);font-weight:400;font-size:48px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.panel > p{margin:0;font-size:24px;color:var(--muted);max-width:1250px}
+.qgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-content:start}
+.qgrid > div{background:var(--stage);border-radius:14px;padding:20px 22px;display:grid;gap:6px;border:2px solid var(--line)}
+.qgrid small{font-size:19px;color:var(--muted);font-weight:700}
+.qgrid b{font-size:27px;line-height:1.35}
+.file{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center}
+.file .ic{width:60px;height:74px;border-radius:6px 20px 6px 6px;background:var(--panel2);border:2px solid var(--ai);display:grid;place-items:center;font-family:var(--mono);font-size:15px;font-weight:600;color:var(--ai)}
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:12px 10px;align-content:start}
+.crumbs .tag{font-size:22px}
+.crumbs .sep{font-size:28px;color:var(--muted)}
+.crumbs .tag.goal{background:var(--bf);color:var(--dark);border-color:var(--bf)}
+
+/* 프롬프트 해부 */
+.pgrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:30px;flex:1;min-height:0}
+.code{background:#0A1628;border:2px solid var(--line);border-radius:16px;padding:22px 26px;font-family:var(--mono);font-size:19.5px;line-height:1.6;display:grid;align-content:start;gap:1px;min-width:0}
+.code .ln{display:grid;grid-template-columns:34px minmax(0,1fr);gap:10px;padding:2px 8px;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere}
+.code .ln::before{content:attr(data-n);color:#4C6690;text-align:right;font-size:16px;padding-top:2px}
+.code .lbl{font-family:var(--body);font-size:16px;font-weight:700;letter-spacing:.06em;color:var(--muted);margin-bottom:10px}
+.code .mk{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--bf);color:var(--dark);font-family:var(--body);font-weight:800;font-size:17px;margin-right:6px;vertical-align:1px}
+.code .ln.hl-on{background:rgba(242,184,75,.16);box-shadow:inset 4px 0 0 var(--bf)}
+.callouts{display:grid;gap:10px;align-content:start}
+.callout{display:grid;grid-template-columns:44px minmax(0,1fr);gap:14px;align-items:start;background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:12px 16px}
+.callout .mk{width:40px;height:40px;border-radius:50%;background:var(--bf);color:var(--dark);display:grid;place-items:center;font-weight:800;font-size:21px}
+.callout b{font-size:24px;display:block;line-height:1.3}
+.callout p{margin:4px 0 0;font-size:19px;color:var(--muted);line-height:1.45}
+
+/* 요청 → 결과 2열 */
+.twocol{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:30px;flex:1}
+.appcol{background:var(--panel);border:2px solid var(--line);border-top:8px solid var(--c);border-radius:16px;padding:24px 28px;display:grid;gap:14px;align-content:start;min-width:0}
+.appcol h3{margin:0;font-family:var(--display);font-weight:400;font-size:42px;color:var(--c)}
+.appcol .lbl{font-size:17px;font-weight:800;letter-spacing:.08em;color:var(--muted)}
+.reqbox{background:var(--stage);border-left:5px solid var(--me);border-radius:8px;padding:12px 18px;display:grid;gap:8px}
+.reqbox .quote{font-size:20px;margin:0}
+.appcol .checks li{font-size:21px}
+
+/* 폰 목업 */
+.phone-grid{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:50px;align-items:start;flex:1}
+.phone{width:400px;height:640px;border-radius:44px;border:10px solid #2A3A58;background:#F4F7F6;color:#16302A;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 60px rgba(0,0,0,.4)}
+.phone .ph-h{background:#0E7A64;color:#fff;padding:22px 18px 14px;font-size:19px;font-weight:800;line-height:1.3}
+.phone .ph-band{background:#DDF3EC;color:#0E5E4D;font-size:13.5px;font-weight:700;padding:8px 14px}
+.phone .ph-body{padding:12px;display:grid;gap:10px}
+.ph-card{background:#fff;border-radius:12px;padding:10px 12px;box-shadow:0 1px 3px rgba(0,0,0,.12);font-size:13.5px;display:grid;gap:6px}
+.ph-card b{font-size:14px;color:#0E7A64}
+.ph-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.ph-fields span{background:#EEF2F1;border-radius:6px;padding:5px 8px;color:#55665F;font-size:12.5px}
+.ph-fac{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.ph-fac span{border:2px solid #9ED8C7;border-radius:8px;padding:8px 6px;text-align:center;font-weight:700;font-size:13px}
+.ph-fac span.on{background:#0E7A64;color:#fff;border-color:#0E7A64}
+.ph-agree{display:flex;gap:6px}
+.ph-agree span{flex:1;text-align:center;padding:6px;border-radius:6px;border:2px solid #C7D3CF;font-weight:700;font-size:12.5px}
+.ph-agree span.on{background:#0E7A64;color:#fff;border-color:#0E7A64}
+.speclines{display:grid;gap:12px;align-content:start}
+.spec{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:baseline;font-size:23px;line-height:1.45;padding:12px 16px;border-radius:10px;background:var(--panel);border:2px solid var(--line)}
+.spec .k{font-family:var(--mono);font-size:18px;color:var(--well);font-weight:600;white-space:nowrap}
+
+/* 천원매점 요청 */
+.store-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:30px;flex:1}
+.req-list{display:grid;gap:12px;align-content:start}
+.req{display:grid;grid-template-columns:52px minmax(0,1fr);gap:14px;background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:10px 16px;align-items:start}
+.req .n{font-family:var(--mono);font-weight:600;font-size:22px;width:44px;height:44px;border-radius:10px;display:grid;place-items:center;background:var(--me);color:var(--dark)}
+.req .n.plus{background:var(--store)}
+.req p{margin:0;font-size:19px;line-height:1.5}
+
+/* 재고 공식 */
+.formula{display:grid;grid-template-columns:minmax(0,1fr) 60px minmax(0,1fr) 60px minmax(0,1fr) 60px minmax(0,1.15fr);align-items:center;gap:6px;margin-top:20px}
+.ftile{background:var(--panel);border:3px solid var(--line);border-radius:18px;padding:22px 10px;text-align:center;display:grid;gap:6px}
+.ftile small{font-size:24px;font-weight:700;color:var(--muted)}
+.ftile b{font-family:var(--display);font-weight:400;font-size:96px;line-height:1;font-variant-numeric:tabular-nums}
+.ftile.res{border-color:var(--store);background:var(--panel2)}
+.ftile.res b{color:var(--store)}
+.op{font-family:var(--display);font-size:70px;text-align:center;color:var(--muted)}
+.feeds{display:grid;grid-template-columns:auto repeat(4,minmax(0,1fr));gap:14px;align-items:center;margin-top:10px}
+.feeds .lbl{font-size:24px;font-weight:800;color:var(--store)}
+.feeds .tag{justify-content:center;font-size:23px}
+
+/* 재현 방법 */
+.methods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:26px}
+.methods .card h3{margin:0;font-family:var(--display);font-weight:400;font-size:44px}
+.methods .card p{margin:0;font-size:23px;color:var(--muted)}
+.stepper{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.stepper .tag{font-size:24px}
+.stepper .tag i{font-style:normal;font-family:var(--mono);color:var(--bf)}
+
+/* 검증 표(예시) */
+.vt{width:100%;border-collapse:collapse;font-size:21px;background:var(--stage);border-radius:10px;overflow:hidden}
+.vt td,.vt th{padding:10px 14px;border-bottom:1px solid var(--line);text-align:left}
+.vt th{font-size:16px;color:var(--muted);letter-spacing:.06em}
+.vt .p{color:var(--ok);font-weight:800}.vt .w{color:var(--bf);font-weight:800}
+
+/* 공통 구조 */
+.arch{display:grid;grid-template-columns:minmax(0,1fr) 230px minmax(0,1fr) 230px minmax(0,1fr);align-items:center;margin-top:6px}
+.abox{background:var(--panel);border:3px solid var(--line);border-radius:18px;padding:26px 24px;display:grid;gap:10px;min-height:250px;align-content:start}
+.abox .ab-k{font-size:17px;font-weight:800;letter-spacing:.08em;color:var(--muted)}
+.abox b{font-family:var(--display);font-weight:400;font-size:42px;line-height:1.15}
+.abox p{margin:0;font-size:21px;color:var(--muted)}
+.pipe{position:relative;height:120px;display:grid;align-content:center;gap:34px;padding:0 8px}
+.pipe .ln{position:relative;height:4px;background:var(--line);border-radius:2px}
+.pipe .ln::after{content:"";position:absolute;top:-8px;width:18px;height:18px;border-radius:50%;background:var(--pc,var(--bf))}
+.pipe.in .ln.fwd::after{animation:travel 1.8s linear infinite}
+.pipe.in .ln.back::after{animation:travelback 1.8s linear infinite .9s}
+.pipe .ln::after{opacity:0}
+.pipe .pl{position:absolute;left:0;right:0;text-align:center;font-size:18px;font-weight:700;color:var(--muted)}
+.pipe .pl.t{top:-6px}.pipe .pl.b{bottom:-6px}
+.gloss{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.gloss > div{background:var(--panel);border:2px solid var(--line);border-radius:12px;padding:14px 18px;display:grid;gap:2px}
+.gloss b{font-size:24px}
+.gloss span{font-size:19px;color:var(--muted)}
+
+/* 앱 4종 */
+.apps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;flex:1}
+.app{background:var(--panel);border:2px solid var(--line);border-top:8px solid var(--c);border-radius:16px;padding:18px 24px;display:grid;gap:10px;align-content:start;min-width:0}
+.app h3{margin:0;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;font-family:var(--display);font-weight:400;font-size:38px;color:var(--c);line-height:1.1}
+.app h3 small{font-family:var(--body);font-size:18px;color:var(--muted);font-weight:500}
+.app dl{margin:0;display:grid;grid-template-columns:96px minmax(0,1fr);gap:6px 14px;font-size:19.5px;line-height:1.45}
+.app dt{color:var(--muted);font-weight:700}
+.app dd{margin:0}
+
+/* 연계 다이어그램 */
+.link-grid{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:28px;flex:1;min-height:0}
+.dia{background:var(--panel);border:2px solid var(--line);border-radius:18px;padding:10px;min-width:0}
+.dia svg{display:block;width:100%;height:100%}
+.dia text{font-family:var(--body)}
+.flowline{stroke-dasharray:10 6}
+.flowline.in{animation:dash 1s linear infinite}
+.rules{display:grid;gap:14px;align-content:start}
+.rule{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:16px 20px;display:grid;gap:4px}
+.rule b{font-size:23px;line-height:1.35}
+.rule p{margin:0;font-size:18.5px;color:var(--muted);line-height:1.45}
+
+/* 검증 */
+.fixes{display:grid;gap:12px}
+.fix{display:grid;grid-template-columns:minmax(0,1fr) 70px minmax(0,1.25fr);align-items:stretch;gap:0}
+.fix .pb,.fix .sol{border-radius:12px;padding:12px 20px;font-size:21.5px;line-height:1.4;display:flex;align-items:center;gap:12px}
+.fix .pb{background:rgba(255,138,128,.12);border:2px solid rgba(255,138,128,.5)}
+.fix .pb::before{content:"!";flex:none;width:30px;height:30px;border-radius:50%;background:var(--bad);color:var(--dark);font-weight:800;display:grid;place-items:center;font-size:19px}
+.fix .sol{background:rgba(91,208,138,.12);border:2px solid rgba(91,208,138,.55)}
+.fix .sol::before{content:"";flex:none;width:30px;height:30px;border-radius:50%;background:var(--ok) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 12.5l4 4 8-9' fill='none' stroke='%230B1830' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/20px no-repeat}
+.fix .ar{display:grid;place-items:center;font-family:var(--display);font-size:38px;color:var(--muted)}
+.fix .sol{clip-path:inset(0 100% 0 0);transition:clip-path .9s cubic-bezier(.4,0,.2,1) .5s}
+.fix.in .sol{clip-path:inset(0 0 0 0)}
+.fixhead{display:grid;grid-template-columns:minmax(0,1fr) 70px minmax(0,1.25fr);font-size:18px;font-weight:800;letter-spacing:.08em;color:var(--muted)}
+.fixhead span:last-child{grid-column:3}
+
+/* 테스트 막대 */
+.bars{display:grid;gap:24px;margin-top:10px}
+.bar{display:grid;grid-template-columns:300px minmax(0,1fr) 200px;align-items:center;gap:20px}
+.bar .nm{font-size:28px;font-weight:700;display:flex;align-items:center;gap:12px}
+.bar .tr{height:46px;background:var(--panel);border-radius:8px;overflow:hidden;border:2px solid var(--line)}
+.bar .fl{height:100%;width:0;background:var(--c);transition:width 1.6s cubic-bezier(.2,.8,.2,1)}
+.bar.in .fl{width:var(--w)}
+.bar .v{font-family:var(--display);font-size:56px;line-height:1;font-variant-numeric:tabular-nums}
+.bar .v small{font-family:var(--body);font-size:22px;color:var(--muted);margin-left:6px}
+.bar .sub2{grid-column:2/4;font-size:19px;color:var(--muted);margin-top:-14px}
+.total{display:flex;align-items:baseline;gap:16px;justify-content:flex-end;font-size:26px;color:var(--muted);border-top:2px solid var(--line);padding-top:16px}
+.total b{font-family:var(--display);font-weight:400;font-size:72px;color:var(--ok);line-height:1}
+
+/* 시작 팁 */
+.tips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;flex:1;align-content:start}
+.tip{background:var(--panel);border:2px solid var(--line);border-radius:16px;padding:22px 24px;display:grid;gap:10px;align-content:start}
+.tip .k{width:50px;height:50px;border-radius:12px;background:var(--bf);color:var(--dark);display:grid;place-items:center;font-family:var(--mono);font-weight:600;font-size:26px}
+.tip b{font-size:28px;line-height:1.3}
+.tip p{margin:0;font-size:20px;color:var(--muted);line-height:1.5}
+
+/* 마무리 */
+.end{justify-content:center;gap:36px}
+.end h2{font-family:var(--display);font-weight:400;font-size:88px;line-height:1.15;margin:0}
+.kit{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.kit > div{background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:18px 20px;font-size:25px;font-weight:700;display:grid;gap:4px}
+.kit small{font-size:18px;color:var(--muted);font-weight:500}
+
+@media (prefers-reduced-motion:reduce){
+  .stage *,.stage *::before,.stage *::after{transition-duration:.01s!important;transition-delay:0s!important;animation:none!important}
+}
+@media (max-width:640px){
+  .caption{min-height:120px}
+  .time{min-width:0}
+  .btn .t-hide{display:none}
+}
+</style>
+
+<div class="wrap">
+  <header class="pagehead">
+    <h1>코딩을 몰라도, 말로 만든 학생 서비스 4종</h1>
+    <p>유한대학교 학생복지팀 · 교직원 AI 활용 사례 공유 · 모션그래픽 해설 (약 12분)</p>
+  </header>
+
+  <div class="player" id="player">
+    <div class="viewport" id="vp">
+      <div class="stage" id="stage" aria-hidden="true">
+        <div class="hud"><span><b>유한대학교 학생복지팀</b> · 교직원 AI 활용 사례</span><span class="hud-r" id="hudR"></span></div>
+
+<!-- ═════ 0 표지 ═════ -->
+<section class="sc cover" data-id="cover" data-title="표지" data-dur="18">
+  <div class="eyebrow" data-at="0">교직원 AI 활용 사례 공유 · 2026.10.</div>
+  <h2 data-at="0.4">코딩을 몰라도,<br><span class="k">말로 만든</span> 학생 서비스 4종</h2>
+  <div class="cover-apps">
+    <div class="appchip" style="--c:var(--bot)" data-at="5"><b>유한봇</b><span>대학생활 안내 앱 + 챗봇</span></div>
+    <div class="appchip" style="--c:var(--well)" data-at="5.6"><b>웰니스스테이션</b><span>시설 이용신청·승인</span></div>
+    <div class="appchip" style="--c:var(--bf)" data-at="6.2"><b>천원의 아침밥</b><span>신청·현장 승인</span></div>
+    <div class="appchip" style="--c:var(--store)" data-at="6.8"><b>천원매점</b><span>신청·재고관리</span></div>
+  </div>
+  <div class="tools stag" data-at="11.5">
+    <span class="lbl">사용한 도구</span>
+    <span class="tag">Claude (AI)</span><span class="tag">구글 스프레드시트</span><span class="tag">구글 Apps Script</span><span class="tag">GitHub Pages</span><span class="free">모두 무료 서비스</span>
+  </div>
+</section>
+
+<!-- ═════ 1 목차 ═════ -->
+<section class="sc" data-id="agenda" data-title="오늘의 순서" data-dur="16">
+  <div class="head">
+    <div class="chap" data-at="0">오늘의 순서</div>
+    <h2 class="ttl" data-at="0.3">어떻게 만들었고, 어떻게 이어져 있는지</h2>
+  </div>
+  <div class="agenda stag" data-at="3">
+    <div><span class="n">01</span><b>AI에게 일을 맡긴다는 것<span>사람과 AI의 역할 나누기</span></b></div>
+    <div><span class="n">05</span><b>각 앱이 하는 일<span>학생 화면과 담당자 화면</span></b></div>
+    <div><span class="n">02</span><b>한 앱이 만들어지는 순서<span>요청부터 운영까지 7단계</span></b></div>
+    <div><span class="n">06</span><b>하나의 앱처럼 이어지는 방식<span>유한봇 안에서 세 서비스 연결</span></b></div>
+    <div><span class="n">03</span><b>실제로 쓴 프롬프트와 결과<span>요청 원문 그대로</span></b></div>
+    <div><span class="n">07</span><b>AI가 만든 것을 다시 검증<span>보안 점검과 자동 테스트</span></b></div>
+    <div><span class="n">04</span><b>4개 앱의 공통 뼈대<span>화면 · 서버 · 구글 시트</span></b></div>
+    <div><span class="n">08</span><b>우리 부서에서 시작하려면<span>효과가 컸던 요청 방식 6가지</span></b></div>
+  </div>
+</section>
+
+<!-- ═════ 2 AI 역할 ═════ -->
+<section class="sc" data-id="roles" data-title="AI에게 일을 맡긴다는 것" data-dur="30">
+  <div class="head">
+    <div class="chap" data-at="0">01 · AI란</div>
+    <h2 class="ttl" data-at="0.3">AI에게 일을 맡긴다는 것</h2>
+    <p class="sub" data-at="1">AI는 ‘말로 설명하면 결과물을 만들어 주는 동료’에 가깝습니다.</p>
+  </div>
+  <div class="roles">
+    <div class="card" data-at="5"><span class="badge b-me" style="justify-self:start">우리가 하는 일</span><span class="big">말로 요청하기</span><p>“학생이 휴대폰으로 신청하고, 나는 관리자 화면에서 승인하고 싶어”처럼 업무 그대로 설명합니다. 이 요청문을 <b>프롬프트</b>라고 부릅니다.</p></div>
+    <div class="arrow" data-at="10.5">→</div>
+    <div class="card" data-at="11" style="border-color:var(--ai)"><span class="badge b-ai" style="justify-self:start">AI가 하는 일</span><span class="big em-ai">코드·문서 만들기</span><p>화면(HTML), 서버(Apps Script) 코드와 <b>설치 순서, 매뉴얼</b>을 만들어 줍니다. 오류를 찾아 고치고 시험해 보는 일도 시킬 수 있습니다.</p></div>
+    <div class="arrow" data-at="17.5">→</div>
+    <div class="card" data-at="18"><span class="badge b-me" style="justify-self:start">다시 우리가 하는 일</span><span class="big">확인하고 결정하기</span><p>실제로 눌러 보고, 이상하면 다시 말합니다. <b>개인정보 동의 문구</b>처럼 책임이 따르는 내용은 담당자가 직접 정합니다.</p></div>
+    <svg class="loop" viewBox="0 0 1408 120" preserveAspectRatio="none" aria-hidden="true">
+      <path class="draw" data-at="24" style="--len:1500" d="M1170,6 C1170,80 1100,96 1000,96 L400,96 C300,96 236,80 236,14" fill="none" stroke="var(--bf)" stroke-width="5" stroke-linecap="round"/>
+      <path data-at="25.2" class="fx-fade" d="M222,30 L236,8 L250,30" fill="none" stroke="var(--bf)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div class="loop-lbl" data-at="25">이상하면 다시 요청 → 고쳐질 때까지 반복</div>
+  </div>
+</section>
+
+<!-- ═════ 3 실제 대화 ═════ -->
+<section class="sc" data-id="chat" data-title="실제 요청 예시" data-dur="34">
+  <div class="head">
+    <div class="chap" data-at="0">01 · AI란</div>
+    <h2 class="ttl" data-at="0.3">요청은 평소 말투 그대로여도 됩니다</h2>
+  </div>
+  <div class="chat-grid">
+    <div class="chatbox" data-at="1">
+      <div class="bub me" data-at="2.5"><span class="who">담당자 · 실제 요청 (오타만 수정)</span><span data-at="2.6" data-type data-cps="11" class="fx-state">지금 관리메뉴 실시간 승인화면에서 마지막에 신청한 학생이 맨밑에 나와서 실시간으로 승인할때 불편함이있어 신청순, 최신순으로 볼수 있는 기능 넣어주고</span></div>
+      <div class="typing" data-at="10.5" data-to="13"><i></i><i></i><i></i></div>
+      <div class="bub ai" data-at="13"><span class="who em-ai">CLAUDE</span>천원의 아침밥 관리자 화면에 <b>최신순·신청순 정렬</b>을 넣었습니다. 순서를 바꿔도 번호는 그대로 유지되고, 새 신청자는 <b>5초 간격 갱신</b>으로 나타납니다.</div>
+    </div>
+    <div data-at="16" class="fx-right">
+      <div class="mock" id="sortMock">
+        <div class="mock-top">천원의 아침밥 · 실시간 승인 <small>관리자 화면</small></div>
+        <div class="sortbar"><span class="s-old">신청순</span><span class="s-new">최신순</span></div>
+        <div class="rows">
+          <div class="row" style="--i:0;--j:4"><span class="no">No.1</span><span class="tm">08:02</span><span>학생 A · ○○과</span><span class="st">승인</span></div>
+          <div class="row" style="--i:1;--j:3"><span class="no">No.2</span><span class="tm">08:05</span><span>학생 B · ○○과</span><span class="st">승인</span></div>
+          <div class="row" style="--i:2;--j:2"><span class="no">No.3</span><span class="tm">08:07</span><span>학생 C · ○○과</span><span class="st">승인</span></div>
+          <div class="row" style="--i:3;--j:1"><span class="no">No.4</span><span class="tm">08:10</span><span>학생 D · ○○과</span><span class="st wait">대기</span></div>
+          <div class="row" style="--i:4;--j:0"><span class="no">No.5</span><span class="tm">08:12</span><span>학생 E · ○○과</span><span class="st wait">대기</span></div>
+          <div class="row new" style="--i:5;--j:-1"><span class="no">No.6</span><span class="tm">08:13</span><span>학생 F · 방금 신청</span><span class="st wait">대기</span></div>
+        </div>
+      </div>
+      <p class="mock-cap">이해를 돕기 위한 화면 예시입니다 (실제 학생 정보 아님).</p>
+      <i data-at="21" class="fx-state" data-toggle="sortMock:sorted"></i>
+      <i data-at="27" class="fx-state" data-toggle="sortMock:withnew"></i>
+    </div>
+  </div>
+</section>
+
+<!-- ═════ 4 제작 순서 ═════ -->
+<section class="sc" data-id="steps" data-title="한 앱이 만들어지는 순서" data-dur="62">
+  <div class="head">
+    <div class="chap" data-at="0">02 · 제작 순서</div>
+    <h2 class="ttl" data-at="0.3">요청부터 운영까지, 한 앱이 만들어지는 순서</h2>
+  </div>
+  <div class="rail stag" data-at="2">
+    <div class="node me"><span class="c">1</span><span class="lb">업무를 말로<br>정리해 요청</span><span class="ring fx-pop" data-at="5" data-to="13">1</span></div>
+    <div class="node ai"><span class="c">2</span><span class="lb">파일 3개를<br>만들어 줌</span><span class="ring fx-pop" data-at="13" data-to="21">2</span></div>
+    <div class="node me"><span class="c">3</span><span class="lb">구글 시트에<br>서버 붙여넣기</span><span class="ring fx-pop" data-at="21" data-to="31">3</span></div>
+    <div class="node me"><span class="c">4</span><span class="lb">화면을<br>인터넷에 올리기</span><span class="ring fx-pop" data-at="31" data-to="39">4</span></div>
+    <div class="node me"><span class="c">5</span><span class="lb">써 보고<br>다시 요청</span><span class="ring fx-pop" data-at="39" data-to="47">5</span></div>
+    <div class="node ai"><span class="c">6</span><span class="lb">전체 검토·<br>보안 점검·시험</span><span class="ring fx-pop" data-at="47" data-to="55">6</span></div>
+    <div class="node ai"><span class="c">7</span><span class="lb">매뉴얼과<br>다른 대학용 키트</span><span class="ring fx-pop" data-at="55">7</span></div>
+  </div>
+  <div class="panels">
+    <div class="panel" data-at="5" data-to="13">
+      <h3><span class="badge b-me">담당자</span>1. 업무를 말로 정리해 요청</h3>
+      <p>화면 모양보다 업무 순서가 먼저입니다. 세 가지를 적어 Claude에 보냅니다.</p>
+      <div class="qgrid stag" data-at="6"><div><small>누가 쓰나요?</small><b>학생 · 관리자</b></div><div><small>무엇을 입력받나요?</small><b>학과 · 학번 · 성명 등</b></div><div><small>관리자는 무엇을 보고 싶나요?</small><b>신청 목록 · 승인 · 통계</b></div></div>
+    </div>
+    <div class="panel" data-at="13" data-to="21">
+      <h3><span class="badge b-ai">AI</span>2. 파일 3개를 만들어 줌</h3>
+      <p>각 파일을 어디에 붙여넣는지 설명도 함께 받습니다.</p>
+      <div class="qgrid stag" data-at="14">
+        <div class="file"><span class="ic">HTML</span><div><small>index.html</small><br><b>학생 화면</b></div></div>
+        <div class="file"><span class="ic">HTML</span><div><small>admin/index.html</small><br><b>관리자 화면</b></div></div>
+        <div class="file"><span class="ic">.gs</span><div><small>Code.gs</small><br><b>서버 코드</b></div></div>
+      </div>
+    </div>
+    <div class="panel" data-at="21" data-to="31">
+      <h3><span class="badge b-me">담당자</span>3. 구글 시트에 서버 붙여넣기</h3>
+      <p>메뉴를 따라가며 붙여넣고 배포하면 서버 주소가 생깁니다. <b style="color:var(--ink)">시트가 곧 데이터 저장소</b>입니다.</p>
+      <div class="crumbs stag" data-at="22.5">
+        <span class="tag">새 구글 스프레드시트</span><span class="sep">›</span><span class="tag">확장 프로그램</span><span class="sep">›</span><span class="tag">Apps Script</span><span class="sep">›</span><span class="tag">Code.gs 붙여넣기</span><span class="sep">›</span><span class="tag">웹 앱으로 배포</span><span class="sep">›</span><span class="tag goal mono">https://…/exec</span>
+      </div>
+    </div>
+    <div class="panel" data-at="31" data-to="39">
+      <h3><span class="badge b-me">담당자</span>4. 화면을 인터넷에 올리기</h3>
+      <p>화면 파일에 서버 주소를 넣고 GitHub Pages에 올리면, 학생이 휴대폰으로 열 수 있는 주소가 생깁니다.</p>
+      <div class="crumbs stag" data-at="32.5">
+        <span class="tag">화면 파일 (HTML)</span><span class="sep">+</span><span class="tag mono">…/exec 서버 주소</span><span class="sep">›</span><span class="tag">GitHub Pages에 올리기</span><span class="sep">›</span><span class="tag goal">학생 휴대폰에서 열리는 주소</span>
+      </div>
+    </div>
+    <div class="panel" data-at="39" data-to="47">
+      <h3><span class="badge b-me">담당자</span><span class="badge b-ai">AI</span>5. 써 보고, 불편한 점을 다시 요청</h3>
+      <p>운영하면서 생긴 불편을 그때그때 말로 요청해 고쳤습니다. 예를 들면:</p>
+      <div class="qgrid stag" data-at="40"><div><small>천원의 아침밥</small><b>목록 정렬 (최신순·신청순)</b></div><div><small>천원의 아침밥</small><b>여러 기기 동시 승인 연동</b></div><div><small>천원매점</small><b>재고 집계 (재고관리 탭)</b></div></div>
+    </div>
+    <div class="panel" data-at="47" data-to="55">
+      <h3><span class="badge b-ai">AI</span>6. 전체 검토와 보안 점검, 시험</h3>
+      <p>코드 전체의 오류·보안 문제를 찾게 하고, 구글 서비스를 흉내 낸 시험 환경에서 자동 테스트를 돌려 통과한 뒤 반영했습니다.</p>
+      <div class="crumbs stag" data-at="48"><span class="tag">오류·보안 문제 찾기</span><span class="sep">›</span><span class="tag">고치기</span><span class="sep">›</span><span class="tag">시험 환경 자동 테스트</span><span class="sep">›</span><span class="tag goal">통과 후 반영</span></div>
+    </div>
+    <div class="panel" data-at="55">
+      <h3><span class="badge b-ai">AI</span>7. 매뉴얼과 다른 대학용 키트</h3>
+      <p>다른 사람이 같은 앱을 쓰고, 다시 만들 수 있도록 문서까지 만들어 두었습니다.</p>
+      <div class="qgrid stag" data-at="56"><div><small>그림 매뉴얼 (HTML)</small><b>비전공자용 사용 설명</b></div><div><small>재현 프롬프트</small><b>똑같이 다시 만드는 요청문</b></div><div><small>기본 세트</small><b>다른 대학이 설치하는 키트</b></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════ 5 프롬프트 해부 ═════ -->
+<section class="sc" data-id="anatomy" data-title="좋은 프롬프트의 뼈대" data-dur="46">
+  <div class="head">
+    <div class="chap" data-at="0">03 · 프롬프트</div>
+    <h2 class="ttl" data-at="0.3">재현 프롬프트 한 장을 뜯어 보면</h2>
+  </div>
+  <div class="pgrid">
+    <div class="code" data-at="1">
+      <div class="lbl">천원의 아침밥 · 처음부터 만들 때 쓰는 재현 프롬프트 [공통 안내] 발췌</div>
+      <div class="ln fx-wipe" data-n="1" data-at="2"><span><span class="mk hlm" data-at="12" >1</span>너는 대학 행정 직원을 돕는 웹 개발자야. 나는 개발 경험이 거의 없는 비전공자야.</span></div>
+      <div class="ln fx-wipe" data-n="2" data-at="3">"천원의 아침밥" 학생 신청 시스템을 만들 거야. 구성은 3개 파일이야.</div>
+      <div class="ln fx-wipe" data-n="3" data-at="3.8"><span><span class="mk hlm" data-at="18">2</span>1) 학생 신청 화면 index.html</span></div>
+      <div class="ln fx-wipe" data-n="4" data-at="4.4">   2) 관리자 화면 admin/index.html</div>
+      <div class="ln fx-wipe" data-n="5" data-at="5">   3) 서버 gas/Code.gs (구글 Apps Script 웹 앱, 구글 스프레드시트를 DB로 사용)</div>
+      <div class="ln fx-wipe" data-n="6" data-at="5.8">꼭 지킬 원칙:</div>
+      <div class="ln fx-wipe" data-n="7" data-at="6.5"><span><span class="mk hlm" data-at="24">3</span>- 관리자 비밀번호를 HTML/JS 파일에 절대 쓰지 마.</span></div>
+      <div class="ln fx-wipe" data-n="8" data-at="7.3">- 학생 화면의 검사는 우회될 수 있으니, 같은 검사를 서버에서도 반드시 해.</div>
+      <div class="ln fx-wipe" data-n="9" data-at="8.2"><span><span class="mk hlm" data-at="31">4</span>- 모르는 것은 지어내지 말고 나에게 물어봐. 테스트하지 않은 것을 "테스트했다"고 말하지 마.</span></div>
+      <div class="ln fx-wipe" data-n="10" data-at="9.2"><span><span class="mk hlm" data-at="38">5</span>- 내가 해야 할 일을 초보자 눈높이로 번호를 붙여 설명해.</span></div>
+      <i class="fx-state" data-at="12" data-to="18" data-toggle="@ln1:hl-on"></i>
+      <i class="fx-state" data-at="18" data-to="24" data-toggle="@ln3-5:hl-on"></i>
+      <i class="fx-state" data-at="24" data-to="31" data-toggle="@ln7-8:hl-on"></i>
+      <i class="fx-state" data-at="31" data-to="38" data-toggle="@ln9:hl-on"></i>
+      <i class="fx-state" data-at="38" data-toggle="@ln10:hl-on"></i>
+    </div>
+    <div class="callouts">
+      <div class="callout" data-at="12"><span class="mk">1</span><div><b>역할과 내 수준을 먼저 알려 주기</b><p>“너는 웹 개발자, 나는 비전공자”라고 밝히면 설명의 눈높이가 맞춰집니다.</p></div></div>
+      <div class="callout" data-at="18"><span class="mk">2</span><div><b>결과물의 모양을 정해 주기</b><p>파일 3개와 각 파일의 역할을 정해 두면, 빠지는 화면이 없습니다.</p></div></div>
+      <div class="callout" data-at="24"><span class="mk">3</span><div><b>보안 원칙을 미리 못 박기</b><p>비밀번호는 화면 코드에 쓰지 않고, 학생 화면의 검사는 서버에서도 다시 합니다.</p></div></div>
+      <div class="callout" data-at="31"><span class="mk">4</span><div><b>정직하게 일하도록 정하기</b><p>모르면 물어보고, 테스트하지 않은 것은 했다고 말하지 않게 합니다.</p></div></div>
+      <div class="callout" data-at="38"><span class="mk">5</span><div><b>내가 할 일을 번호로 받기</b><p>설치·배포처럼 사람이 할 일을 초보자 눈높이의 순서로 받습니다.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════ 6 아침밥 · 웰니스 결과 ═════ -->
+<section class="sc" data-id="results1" data-title="운영 중 보완 요청과 결과" data-dur="44">
+  <div class="head">
+    <div class="chap" data-at="0">03 · 프롬프트</div>
+    <h2 class="ttl" data-at="0.3">운영 중 보완 요청 → 결과</h2>
+  </div>
+  <div class="twocol">
+    <div class="appcol" style="--c:var(--bf)" data-at="1">
+      <h3>천원의 아침밥</h3>
+      <span class="lbl">보완 요청 (원문)</span>
+      <div class="reqbox stag" data-at="2.5"><p class="quote">신청자 화면과 관리자 화면 코드 전반적으로 오류나 버그가 없는지 검토 및 분석</p><p class="quote">내가 제작한 천원매점관리자 코드처럼 어디에서 승인해도 연동되게 보완해주고 비밀번호가 밖으로 노출안되게 보안 보완</p></div>
+      <span class="lbl" data-at="11">결과</span>
+      <ul class="checks stag" data-at="11.5" style="--c:var(--bf)"><li><span>실시간 신청 목록 최신순·신청순 정렬</span></li><li><span>여러 기기에서 승인해도 5초 간격으로 상태 연동</span></li><li><span>화면에 있던 PIN을 없애고 서버에서 비밀번호 확인</span></li><li><span>신청시간이 <span class="mono">1899-12-30</span>으로 보이던 오류 수정</span></li></ul>
+    </div>
+    <div class="appcol" style="--c:var(--well)" data-at="23">
+      <h3>웰니스스테이션</h3>
+      <span class="lbl">요청 방식</span>
+      <div class="reqbox" data-at="24"><p style="margin:0;font-size:22px">천원의 아침밥에서 한 검토·보완 작업을 웰니스스테이션에도 <b>똑같이 적용</b>해 달라고 요청</p></div>
+      <span class="lbl" data-at="30">결과</span>
+      <ul class="checks stag" data-at="30.5" style="--c:var(--well)"><li><span>로그인 없이 명단 조회·승인·삭제가 되던 문제 차단</span></li><li><span>오전 9시 이전에 날짜가 전날로 잡히던 오류 수정</span></li><li><span>추정치로 그려지던 시설별 통계를 실제 집계값으로 교체</span></li><li><span>학년도 종료 후 성명·학번을 지우는 비식별화 기능</span></li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═════ 7 웰니스 학생 화면 ═════ -->
+<section class="sc" data-id="wellphone" data-title="말로 쓴 화면 설계" data-dur="34">
+  <div class="head">
+    <div class="chap" data-at="0">03 · 프롬프트</div>
+    <h2 class="ttl" data-at="0.3">화면도 말로 설계합니다 <span class="em-well">· 웰니스스테이션</span></h2>
+  </div>
+  <div class="phone-grid">
+    <div class="speclines">
+      <div class="note" data-at="1">재현 프롬프트 [학생 화면] 발췌 · 모바일 우선</div>
+      <div class="spec" data-at="3"><span class="k">상단 헤더</span><span>“유한대학교 웰니스스테이션 이용신청”</span></div>
+      <div class="spec" data-at="6"><span class="k">안내띠</span><span>“신청 후 관리자 승인 후 이용 가능합니다 · 평일 09:00~17:40”</span></div>
+      <div class="spec" data-at="10"><span class="k">카드 ①</span><span>기본 정보: 사용 날짜(오늘로 고정), 학과, 학번(숫자 9자리), 성명</span></div>
+      <div class="spec" data-at="15"><span class="k">카드 ②</span><span>희망 이용 시설: 2×2 큰 체크 카드 4개</span></div>
+      <div class="spec" data-at="19"><span class="k">카드 ③</span><span>이용 시간: 출입 시간(현재 시각 자동), 퇴실 시간(“관리자 전용”)</span></div>
+      <div class="spec" data-at="23"><span class="k">카드 ④</span><span>개인정보 수집·이용 동의: [동의함][동의하지 않음] — 동의함이 아니면 전송하지 않는다.</span></div>
+    </div>
+    <div class="phone" data-at="2">
+      <div class="ph-h" data-at="3.4">유한대학교<br>웰니스스테이션 이용신청</div>
+      <div class="ph-band" data-at="6.4">신청 후 관리자 승인 후 이용 가능 · 평일 09:00~17:40</div>
+      <div class="ph-body">
+        <div class="ph-card" data-at="10.4"><b>① 기본 정보</b><div class="ph-fields"><span>사용 날짜 · 오늘</span><span>학과</span><span>학번 (9자리)</span><span>성명</span></div></div>
+        <div class="ph-card" data-at="15.4"><b>② 희망 이용 시설</b><div class="ph-fac"><span class="on">인생네컷</span><span>코인노래방</span><span>탁구장</span><span>헬스장</span></div></div>
+        <div class="ph-card" data-at="19.4"><b>③ 이용 시간</b><div class="ph-fields"><span>출입 · 현재 시각</span><span>퇴실 · 관리자 전용</span></div></div>
+        <div class="ph-card" data-at="23.4"><b>④ 개인정보 수집·이용 동의</b><div class="ph-agree"><span class="on">동의함</span><span>동의하지 않음</span></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════ 8 천원매점 요청 ═════ -->
+<section class="sc" data-id="store" data-title="천원매점 요청 원문" data-dur="44">
+  <div class="head">
+    <div class="chap" data-at="0">03 · 프롬프트</div>
+    <h2 class="ttl" data-at="0.3">한 번의 요청에 네 가지를 담았습니다 <span class="em-store">· 천원매점</span></h2>
+  </div>
+  <div class="store-grid">
+    <div class="req-list">
+      <div class="note" data-at="1">실제 요청 원문 (2026.10.12.) · 오타도 원문 그대로</div>
+      <div class="req" data-at="2"><span class="n">0</span><p>천원의 아침밥 코드, 웰니스스테이션 검토 및 기능개선 에서 했던 작업들 똑같이 실행해줄수 있을까?</p></div>
+      <div class="req" data-at="7"><span class="n">1</span><p>지금 사용하는 툴을 만약에 똑같이 구현하고자 한다면 어떻게 프롬포트를 써야 똑같이 구현되고 쓸수 있을까? 완벽하게 일치되는 프롬포트 제시해주고</p></div>
+      <div class="req" data-at="13"><span class="n">2</span><p>다른 대학 직원이 똑같은 형태로 천원매점 프로그램을 쓰게 하고 싶어 스킬 또는 MD 파일 깃허브 기본 셋팅 파일 제시해줄수 있을까?</p></div>
+      <div class="req" data-at="19"><span class="n">3</span><p>천원매점 프로그램을 사용할수 있도록 프롬프트부터 실제로 쓸수 있게 설명해줄수 있는 매뉴얼 제작해줘(html)_초보자 비전공자도 이해하기 쉽게</p></div>
+      <div class="req" data-at="25"><span class="n plus">+</span><p><b>보완 :</b> 관리자에서 탭을 추가하여 진열재고를 기준으로 금일 잔여 재고량을 입력하면 금일 판매량이 도출되는 재고관리 탭 하나 추가해줘(전체적으로 다른 탭도 점검하면서)</p></div>
+    </div>
+    <div class="appcol" style="--c:var(--store)" data-at="31">
+      <h3>결과</h3>
+      <ul class="checks stag" data-at="31.5" style="--c:var(--store)">
+        <li><span>관리자 화면에 <b>재고관리(마감)</b> 탭 신설</span></li>
+        <li><span>확정하면 판매실적·재고현황·일일 리포트·발주 예측에 반영</span></li>
+        <li><span>새 학교 설치 시 시트 생성이 중간에 멈추던 오류 수정</span></li>
+        <li><span>재현 프롬프트, 다른 대학용 키트(zip), 초보자용 HTML 매뉴얼</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═════ 9 재고 공식 ═════ -->
+<section class="sc" data-id="formula" data-title="재고관리(마감) 탭의 계산" data-dur="28">
+  <div class="head">
+    <div class="chap" data-at="0">03 · 프롬프트</div>
+    <h2 class="ttl" data-at="0.3">재고관리(마감) 탭은 이렇게 계산합니다</h2>
+    <p class="sub" data-at="1">마감 때 남은 수량만 세어 입력하면, 오늘 판매량이 자동으로 나옵니다. <span style="color:var(--bf)">(아래 숫자는 이해를 돕는 예시)</span></p>
+  </div>
+  <div class="formula">
+    <div class="ftile" data-at="3"><small>시작 진열</small><b data-at="3" data-count="30" class="fx-state">0</b></div>
+    <div class="op" data-at="6">+</div>
+    <div class="ftile" data-at="6.5"><small>보충</small><b data-at="6.5" data-count="10" class="fx-state">0</b></div>
+    <div class="op" data-at="9.5">−</div>
+    <div class="ftile" data-at="10"><small>마감 잔여</small><b data-at="10" data-count="12" class="fx-state">0</b></div>
+    <div class="op" data-at="13.5">=</div>
+    <div class="ftile res fx-pop" data-at="14"><small>오늘 판매량</small><b data-at="14.4" data-count="28" class="fx-state">0</b></div>
+  </div>
+  <div class="feeds">
+    <span class="lbl" data-at="19">확정하면 →</span>
+    <span class="tag" data-at="19.6">판매실적</span><span class="tag" data-at="20.2">재고현황</span><span class="tag" data-at="20.8">일일 리포트</span><span class="tag" data-at="21.4">발주 예측</span>
+  </div>
+</section>
+
+<!-- ═════ 10 재현 방법 ═════ -->
+<section class="sc" data-id="reproduce" data-title="‘완벽하게 일치하는 프롬프트’에 대한 답" data-dur="34">
+  <div class="head">
+    <div class="chap" data-at="0">03 · 프롬프트</div>
+    <h2 class="ttl" data-at="0.3">“완벽하게 일치하는 프롬프트”를 묻자</h2>
+    <p class="sub" data-at="2">AI는 <b style="color:var(--ink)">글자 하나까지 같은 코드는 보장할 수 없다</b>고 솔직하게 답하고, 두 가지 방법을 제시했습니다.</p>
+  </div>
+  <div class="methods">
+    <div class="card" data-at="8"><span class="badge b-ai" style="justify-self:start">방법 A</span><h3>파일 첨부형</h3><p>지금 쓰는 파일을 그대로 첨부해서 출발합니다. <b style="color:var(--ink)">같은 파일에서 시작</b>하므로 결과가 가장 비슷합니다.</p></div>
+    <div class="card" data-at="13"><span class="badge b-ai" style="justify-self:start">방법 B</span><h3>명세형</h3><p>기능과 화면을 글로 자세히 적어 <b style="color:var(--ink)">같은 기능을 새로 만듭니다</b>. 코드는 달라도 쓰는 방법은 같습니다.</p></div>
+  </div>
+  <div class="stepper">
+    <span class="note" data-at="19">재현 프롬프트는 한 단계씩 요청하도록 나눴습니다</span>
+  </div>
+  <div class="stepper">
+    <span class="tag" data-at="21"><i>1</i> 서버</span><span class="arrow" data-at="22">→</span>
+    <span class="tag" data-at="22.5"><i>2</i> 학생 화면</span><span class="arrow" data-at="23.5">→</span>
+    <span class="tag" data-at="24"><i>3</i> 관리자 화면</span><span class="arrow" data-at="25">→</span>
+    <span class="tag" data-at="25.5"><i>4</i> 검증</span>
+  </div>
+</section>
+
+<!-- ═════ 11 유한봇 프롬프트 ═════ -->
+<section class="sc" data-id="botprompt" data-title="유한봇 대시보드와 검증 요청" data-dur="42">
+  <div class="head">
+    <div class="chap" data-at="0">03 · 프롬프트</div>
+    <h2 class="ttl" data-at="0.3">“스스로 점검하고 결과를 표로” <span class="em-bot">· 유한봇</span></h2>
+  </div>
+  <div class="pgrid">
+    <div class="code" data-at="1">
+      <div class="lbl">유한봇 · 재현 프롬프트 [대시보드 단계] 발췌</div>
+      <div class="ln fx-wipe" data-n="1" data-at="2">담당자용 단일 HTML 대시보드를 만들어줘.</div>
+      <div class="ln fx-wipe" data-n="2" data-at="2.8">- 열면 로그인 창</div>
+      <div class="ln fx-wipe" data-n="3" data-at="3.6">- 탭: 전체 현황(총질문·오늘·성공률·실패), 유형별 분석, 질문 랭킹 TOP20, 답변실패, 탭 클릭 통계, 방문자 통계(모바일/PC), 전체 로그, 공지관리(작성·수정·삭제, 이미지 업로드)</div>
+      <div class="ln fx-wipe" data-n="4" data-at="5.2">- 모든 학생 입력은 글자로만 표시</div>
+      <div class="ln fx-wipe" data-n="5" data-at="6">- CSV 내보내기</div>
+      <div class="ln fx-wipe" data-n="6" data-at="9">[검증 요청]</div>
+      <div class="ln fx-wipe" data-n="7" data-at="9.8">만든 3개 파일을 체크리스트로 스스로 점검하고, 통과/실패를 표로 알려줘.</div>
+      <div class="ln fx-wipe" data-n="8" data-at="10.8">구글 서버에서 직접 실행해 보지 못한 항목은 "실제 환경에서 확인 필요"로 구분해줘.</div>
+      <i class="fx-state" data-at="12" data-toggle="@ln6-8:hl-on"></i>
+    </div>
+    <div class="callouts">
+      <div class="callout" data-at="13" style="grid-template-columns:minmax(0,1fr)"><div>
+        <b>이렇게 받으면 남은 일이 분명해집니다</b>
+        <table class="vt" style="margin-top:10px"><thead><tr><th>점검 항목 (예시)</th><th>결과</th></tr></thead>
+          <tbody><tr><td>로그인 없이 기록 접근 차단</td><td class="p">통과</td></tr><tr><td>학생 입력을 글자로만 표시</td><td class="p">통과</td></tr><tr><td>메일 보고서 실제 발송</td><td class="w">실제 환경에서 확인 필요</td></tr></tbody></table>
+      </div></div>
+      <div class="appcol" style="--c:var(--bot);padding:18px 22px" data-at="22">
+        <span class="lbl">결과</span>
+        <ul class="checks stag" data-at="22.5" style="--c:var(--bot)">
+          <li style="font-size:20px"><span>공지사항: 시작일·종료일 지정 (예약 게시, 자동 종료)</span></li>
+          <li style="font-size:20px"><span>질문 속 전화번호·이메일·학번 형태 숫자 자동 가림</span></li>
+          <li style="font-size:20px"><span>로그인 없이 학생 질문 기록이 보이던 문제 차단</span></li>
+          <li style="font-size:20px"><span>“전자출결”, “공결안내” 질문 분류 오류 수정</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════ 12 공통 구조 ═════ -->
+<section class="sc" data-id="arch" data-title="4개 앱의 공통 뼈대" data-dur="42">
+  <div class="head">
+    <div class="chap" data-at="0">04 · 공통 구조</div>
+    <h2 class="ttl" data-at="0.3">4개 앱이 모두 같은 뼈대를 씁니다</h2>
+    <p class="sub" data-at="1">별도 서버나 유료 서비스 없이, 학교 업무에서 이미 쓰는 구글 시트를 데이터 저장소로 씁니다.</p>
+  </div>
+  <div class="arch">
+    <div class="abox" data-at="3"><span class="ab-k">화면</span><b>HTML</b><p>학생 화면·관리자 화면. GitHub Pages에 올려 주소로 엽니다.</p></div>
+    <div class="pipe" data-at="8"><span class="pl t">요청 →</span><div class="ln fwd" style="--pc:var(--bf)"></div><div class="ln back" style="--pc:var(--ok)"></div><span class="pl b">← 응답</span></div>
+    <div class="abox" data-at="7"><span class="ab-k">서버</span><b>Apps Script</b><p><span class="mono">Code.gs</span> 한 파일. 신청을 검사해 저장하고, 관리자 비밀번호를 확인합니다.</p></div>
+    <div class="pipe" data-at="13"><span class="pl t">기록 →</span><div class="ln fwd" style="--pc:var(--bf)"></div><div class="ln back" style="--pc:var(--ok)"></div><span class="pl b">← 읽기</span></div>
+    <div class="abox" data-at="12"><span class="ab-k">저장소</span><b>구글 스프레드시트</b><p>신청 목록, 승인 기록, 설정이 시트 탭마다 쌓입니다.</p></div>
+  </div>
+  <div class="gloss stag" data-at="20">
+    <div><b>프롬프트</b><span>AI에게 보내는 요청 글</span></div>
+    <div><b>Apps Script (GAS)</b><span>구글 시트에 붙어서 돌아가는 작은 프로그램</span></div>
+    <div><b>GitHub Pages</b><span>HTML 파일을 무료로 인터넷 주소로 만들어 주는 곳</span></div>
+    <div><b>PWA</b><span>휴대폰 홈 화면에 앱처럼 설치되는 웹페이지 (유한봇)</span></div>
+    <div><b>배포</b><span>만든 서버를 인터넷에서 부를 수 있게 켜는 일</span></div>
+    <div><b>토큰</b><span>로그인에 성공하면 받는 임시 출입증</span></div>
+  </div>
+</section>
+
+<!-- ═════ 13 앱 4종 ═════ -->
+<section class="sc" data-id="apps" data-title="각 앱이 하는 일" data-dur="48">
+  <div class="head">
+    <div class="chap" data-at="0">05 · 앱 4종</div>
+    <h2 class="ttl" data-at="0.3">각 앱이 하는 일</h2>
+  </div>
+  <div class="apps">
+    <article class="app" style="--c:var(--bot)" data-at="2">
+      <h3>유한봇 <small>2026 슬기로운 유한대학 생활 안내</small></h3>
+      <dl><dt>학생</dt><dd>학사·장학·시설 안내를 탭으로 보고 챗봇에 질문. 공지 확인. 홈 화면에 설치 가능</dd>
+      <dt>담당자</dt><dd>질문 수·성공률·시간대, 답변 실패 목록, 탭 클릭·방문자 통계, 공지 작성</dd>
+      <dt>자동</dt><dd>매주 월 07시 주간 · 매월 1일 07시 월간 이용 보고 메일</dd>
+      <dt>특징</dt><dd>외부 AI 요금이 들지 않는 규칙 기반 챗봇 (등록한 답변 사전으로 응답)</dd></dl>
+    </article>
+    <article class="app" style="--c:var(--well)" data-at="14">
+      <h3>웰니스스테이션 <small>시설 이용신청·승인</small></h3>
+      <dl><dt>시설</dt><dd>인생네컷, 코인노래방(ROOM 1~3), 탁구장, 헬스장 · 학생회관 4층 · 평일 09:00~17:40</dd>
+      <dt>학생</dt><dd>당일 이용신청 → 승인 대기</dd>
+      <dt>담당자</dt><dd>승인·거부, 노래방 룸 배정, 퇴실 입력, 실시간 이용현황(30초 갱신), 시설·학과·시간대 통계, 대시보드 모드</dd></dl>
+    </article>
+    <article class="app" style="--c:var(--bf)" data-at="25">
+      <h3>천원의 아침밥 <small>신청·현장 승인</small></h3>
+      <dl><dt>학생</dt><dd>휴대폰으로 신청, 남은 수량 확인, 개인정보 동의, 계좌 안내</dd>
+      <dt>담당자</dt><dd>실시간 승인(최신순·신청순), 여러 기기 동시 승인 연동, 통계·서명부, 식단·시간 설정</dd>
+      <dt>개인정보</dt><dd>성명·학과·학번, 1년(사업 종료 시까지) 보유. 종료 후 성명·학번 삭제, 학과 통계만 보존 예정</dd></dl>
+    </article>
+    <article class="app" style="--c:var(--store)" data-at="36">
+      <h3>천원매점 <small>경기도 대학생 천원매점</small></h3>
+      <dl><dt>운영</dt><dd>2026.9.3. 교내 개소, 12월까지 운영 예정</dd>
+      <dt>학생</dt><dd>신청 후 현장 수령 (간편 신청 모드, 꾸러미 데이, 드리미 서비스 지원)</dd>
+      <dt>담당자</dt><dd>관리자 탭 12개: 실시간 승인, 재고현황, 재고관리(마감), 일일 리포트, 품목·학과 분석, 수령확인부, 발주관리, 설정 등</dd></dl>
+    </article>
+  </div>
+</section>
+
+<!-- ═════ 14 연계 ═════ -->
+<section class="sc" data-id="link" data-title="하나의 앱처럼 이어지는 방식" data-dur="52">
+  <div class="head">
+    <div class="chap" data-at="0">06 · 연계·연동</div>
+    <h2 class="ttl" data-at="0.3">4개가 하나의 앱처럼 이어지는 방식</h2>
+  </div>
+  <div class="link-grid">
+    <div class="dia" data-at="1">
+      <svg viewBox="0 0 960 600" aria-hidden="true">
+        <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>
+        <g data-at="2">
+          <rect x="16" y="240" width="130" height="100" rx="14" fill="var(--panel2)" stroke="var(--line)" stroke-width="2"/>
+          <text x="81" y="284" text-anchor="middle" font-size="24" font-weight="700" fill="var(--ink)">학생</text>
+          <text x="81" y="314" text-anchor="middle" font-size="17" fill="var(--muted)">휴대폰</text>
+        </g>
+        <line class="flowline" data-at="3" x1="148" y1="290" x2="226" y2="290" stroke="var(--muted)" stroke-width="3" marker-end="url(#ah)"/>
+        <g data-at="3.5">
+          <rect x="230" y="140" width="290" height="300" rx="18" fill="var(--stage)" stroke="var(--bot)" stroke-width="4"/>
+          <text x="375" y="182" text-anchor="middle" font-size="26" font-weight="800" fill="var(--bot)">유한봇 앱</text>
+          <text x="375" y="208" text-anchor="middle" font-size="16" fill="var(--muted)">안내 · 챗봇 · 공지</text>
+          <rect x="252" y="230" width="246" height="54" rx="10" fill="var(--panel2)"/>
+          <text x="375" y="264" text-anchor="middle" font-size="18" fill="var(--ink)">웰니스 실시간 현황 탭</text>
+          <rect x="252" y="296" width="246" height="54" rx="10" fill="var(--panel2)"/>
+          <text x="375" y="330" text-anchor="middle" font-size="18" fill="var(--ink)">천원의 아침밥 버튼</text>
+          <rect x="252" y="362" width="246" height="54" rx="10" fill="var(--panel2)"/>
+          <text x="375" y="396" text-anchor="middle" font-size="18" fill="var(--ink)">천원매점 현황 버튼</text>
+        </g>
+        <g data-at="9">
+          <rect x="640" y="28" width="300" height="110" rx="14" fill="var(--stage)" stroke="var(--well)" stroke-width="3"/>
+          <text x="790" y="70" text-anchor="middle" font-size="22" font-weight="800" fill="var(--well)">웰니스스테이션 서버</text>
+          <text x="790" y="98" text-anchor="middle" font-size="16" fill="var(--muted)">Apps Script + 구글 시트</text>
+          <text x="790" y="122" text-anchor="middle" font-size="16" fill="var(--muted)">신청 화면 · 관리자 화면</text>
+        </g>
+        <path class="flowline" data-at="9.5" d="M498,257 C580,257 570,83 636,83" fill="none" stroke="var(--well)" stroke-width="4" marker-end="url(#ah)"/>
+        <g data-at="15">
+          <rect x="640" y="190" width="300" height="110" rx="14" fill="var(--stage)" stroke="var(--bf)" stroke-width="3"/>
+          <text x="790" y="232" text-anchor="middle" font-size="22" font-weight="800" fill="var(--bf)">천원의 아침밥 서버</text>
+          <text x="790" y="260" text-anchor="middle" font-size="16" fill="var(--muted)">Apps Script + 구글 시트</text>
+          <text x="790" y="284" text-anchor="middle" font-size="16" fill="var(--muted)">신청 화면 · 관리자 화면</text>
+        </g>
+        <path class="flowline" data-at="15.5" d="M498,323 C580,323 570,245 636,245" fill="none" stroke="var(--bf)" stroke-width="4" marker-end="url(#ah)"/>
+        <g data-at="21">
+          <rect x="640" y="352" width="300" height="110" rx="14" fill="var(--stage)" stroke="var(--store)" stroke-width="3"/>
+          <text x="790" y="394" text-anchor="middle" font-size="22" font-weight="800" fill="var(--store)">천원매점 서버</text>
+          <text x="790" y="422" text-anchor="middle" font-size="16" fill="var(--muted)">Apps Script + 구글 시트</text>
+          <text x="790" y="446" text-anchor="middle" font-size="16" fill="var(--muted)">신청 화면 · 관리자(탭 12개)</text>
+        </g>
+        <path class="flowline" data-at="21.5" d="M498,389 C580,389 570,407 636,407" fill="none" stroke="var(--store)" stroke-width="4" marker-end="url(#ah)"/>
+        <text data-at="10" x="580" y="482" text-anchor="middle" font-size="16" fill="var(--muted)">현황 묻기·받기</text>
+        <g data-at="27">
+          <rect x="230" y="500" width="290" height="80" rx="14" fill="var(--stage)" stroke="var(--bot)" stroke-width="3"/>
+          <text x="375" y="534" text-anchor="middle" font-size="20" font-weight="800" fill="var(--bot)">유한봇 서버 + 시트</text>
+          <text x="375" y="562" text-anchor="middle" font-size="15" fill="var(--muted)">질문·탭·방문 기록, 공지</text>
+        </g>
+        <line class="flowline" data-at="27.5" x1="375" y1="442" x2="375" y2="496" stroke="var(--bot)" stroke-width="4" marker-end="url(#ah)"/>
+        <g data-at="31">
+          <rect x="640" y="510" width="300" height="62" rx="12" fill="var(--panel2)" stroke="var(--line)" stroke-width="2"/>
+          <text x="790" y="548" text-anchor="middle" font-size="18" fill="var(--ink)">담당자 메일 · 주간·월간 보고서</text>
+        </g>
+        <line class="flowline" data-at="31.5" x1="522" y1="540" x2="636" y2="540" stroke="var(--bot)" stroke-width="3" marker-end="url(#ah)"/>
+      </svg>
+    </div>
+    <div class="rules">
+      <div class="rule" data-at="36"><b>서버가 따로라 서로 영향 없음</b><p>한 앱을 고치거나 멈춰도 다른 앱은 그대로 돌아갑니다.</p></div>
+      <div class="rule" data-at="41"><b>공개해도 되는 현황만 받아 옵니다</b><p>명단 같은 정보는 각 앱의 관리자 화면에서 로그인해야만 볼 수 있습니다.</p></div>
+      <div class="rule" data-at="46"><b>필요한 앱만 골라 연결</b><p>유한봇에서 서버 주소를 비워 두면 해당 버튼이 숨겨집니다. 다른 대학도 골라 쓸 수 있습니다.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════ 15 검증 ═════ -->
+<section class="sc" data-id="verify" data-title="AI가 만든 것을 다시 검증" data-dur="44">
+  <div class="head">
+    <div class="chap" data-at="0">07 · 검증·보완</div>
+    <h2 class="ttl" data-at="0.3">AI가 만든 것을 AI로 다시 검증했습니다</h2>
+    <p class="sub" data-at="1">처음 만든 앱은 잘 돌아갔지만, 전체 검토를 요청하자 눈에 보이지 않던 문제가 나왔습니다.</p>
+  </div>
+  <div class="fixes">
+    <div class="fixhead" data-at="3"><span>찾은 문제 (4개 앱 공통)</span><span>어떻게 고쳤나</span></div>
+    <div class="fix" data-at="4"><div class="pb">관리자 PIN이 화면 코드에 그대로 보임</div><div class="ar">→</div><div class="sol">비밀번호는 구글 서버에만 보관하고 서버에서 확인. 로그인 6시간 유지, 10회 틀리면 10분 잠금</div></div>
+    <div class="fix" data-at="12"><div class="pb">서버 주소만 알면 로그인 없이 명단 조회 가능</div><div class="ar">→</div><div class="sol">로그인 출입증(토큰)이 없으면 명단·승인·설정 요청을 거절</div></div>
+    <div class="fix" data-at="19"><div class="pb">입력칸의 글자가 관리자 화면에서 프로그램처럼 실행될 수 있음</div><div class="ar">→</div><div class="sol">모든 입력값을 글자로만 표시하도록 변경</div></div>
+    <div class="fix" data-at="27"><div class="pb">학생 화면 검사만 있고 서버 검사가 없음</div><div class="ar">→</div><div class="sol">서버에서도 당일 날짜·신청 시간·학번 9자리·중복 신청을 다시 검사</div></div>
+    <div class="fix" data-at="35"><div class="pb">개인정보 동의 절차 없음</div><div class="ar">→</div><div class="sol">동의해야 신청 가능, 동의 일시 기록, 사업 종료 후 비식별화 기능</div></div>
+  </div>
+</section>
+
+<!-- ═════ 16 테스트 ═════ -->
+<section class="sc" data-id="tests" data-title="시험 환경 자동 테스트" data-dur="26">
+  <div class="head">
+    <div class="chap" data-at="0">07 · 검증·보완</div>
+    <h2 class="ttl" data-at="0.3">고친 뒤, 자동 테스트를 통과하고 배포</h2>
+  </div>
+  <div class="bars">
+    <div class="bar" style="--c:var(--well);--w:78.9%" data-at="2"><span class="nm"><i class="dot"></i>웰니스스테이션</span><div class="tr"><div class="fl"></div></div><span class="v"><span data-at="2" data-count="90" class="fx-state">0</span><small>건 통과</small></span></div>
+    <div class="bar" style="--c:var(--bf);--w:78.1%" data-at="4"><span class="nm"><i class="dot"></i>천원의 아침밥</span><div class="tr"><div class="fl"></div></div><span class="v"><span data-at="4" data-count="89" class="fx-state">0</span><small>건 통과</small></span></div>
+    <div class="bar" style="--c:var(--store);--w:100%" data-at="6"><span class="nm"><i class="dot"></i>천원매점</span><div class="tr"><div class="fl"></div></div><span class="v"><span data-at="6" data-count="114" class="fx-state">0</span><small>건 통과</small></span></div>
+    <div class="bar" style="--c:var(--bot);--w:57.9%" data-at="8"><span class="nm"><i class="dot"></i>유한봇</span><div class="tr"><div class="fl"></div></div><span class="v"><span data-at="8" data-count="66" class="fx-state">0</span><small>건 통과</small></span><span class="sub2">대학생활 앱·챗봇 로그 · 서버 29 · 화면 30 · 키트 7</span></div>
+  </div>
+  <div class="total" data-at="12">4개 앱 합계 <b data-at="12" data-count="359" class="fx-state">0</b> 건 통과</div>
+  <p class="note" data-at="16">구글 서비스를 흉내 낸 시험 환경 기준입니다. 권한 승인 창, 실제 배포, 메일 발송처럼 실제 구글에서만 확인되는 항목은 별도 점검표로 담당자가 직접 확인했습니다.</p>
+</section>
+
+<!-- ═════ 17 시작하는 법 ═════ -->
+<section class="sc" data-id="tips" data-title="우리 부서에서 시작하려면" data-dur="50">
+  <div class="head">
+    <div class="chap" data-at="0">08 · 시작하는 법</div>
+    <h2 class="ttl" data-at="0.3">우리 부서에서 시작해 보려면</h2>
+    <p class="sub" data-at="1">코딩 지식보다 업무를 정확히 아는 것이 더 중요했습니다.</p>
+  </div>
+  <div class="tips">
+    <div class="tip" data-at="3"><span class="k">1</span><b>업무 흐름을 먼저 말하기</b><p>누가 입력하고, 누가 확인하고, 무엇을 집계하는지. 화면 모양보다 업무 순서가 먼저입니다.</p></div>
+    <div class="tip" data-at="10"><span class="k">2</span><b>한 번에 다 시키지 않기</b><p>서버 → 학생 화면 → 관리자 화면 → 검증처럼 단계를 나누면 빠지는 기능이 줄어듭니다.</p></div>
+    <div class="tip" data-at="17"><span class="k">3</span><b>“지어내지 말고 물어봐” 넣기</b><p>모르는 정보는 질문하게 하고, 테스트하지 않은 것은 했다고 말하지 말라고 미리 정해 둡니다.</p></div>
+    <div class="tip" data-at="24"><span class="k">4</span><b>검토를 따로 요청하기</b><p>“전반적으로 오류나 버그가 없는지 검토 및 분석”처럼 점검만 따로 시키면 숨은 문제가 드러납니다.</p></div>
+    <div class="tip" data-at="32"><span class="k">5</span><b>책임 있는 문구는 직접 정하기</b><p>개인정보 보유 기간, 동의 문구는 담당 부서 기준으로 사람이 정해서 넣습니다.</p></div>
+    <div class="tip" data-at="40"><span class="k">6</span><b>잘 된 방식을 재사용하기</b><p>“천원의 아침밥에서 한 작업을 똑같이 해 줘”처럼 앞선 작업을 기준으로 삼으면 다음 앱이 빨라집니다.</p></div>
+  </div>
+</section>
+
+<!-- ═════ 18 마무리 ═════ -->
+<section class="sc end" data-id="end" data-title="마무리" data-dur="22">
+  <div class="chap" data-at="0">함께 시작해요</div>
+  <h2 data-at="0.4">우리 학교 다른 부서도<br><span class="em-bf">같은 방식으로</span> 시작할 수 있습니다</h2>
+  <div class="kit stag" data-at="5">
+    <div>설치 안내<small>순서대로 따라 하기</small></div>
+    <div>재현 프롬프트<small>단계별 요청문</small></div>
+    <div>그림 매뉴얼<small>비전공자용 HTML</small></div>
+    <div>설치 후 점검표<small>실제 환경 확인</small></div>
+  </div>
+  <p class="note" data-at="11" style="font-size:24px">각 앱의 기본 세트는 학교명·계좌·서버 주소를 비워 두었습니다. · 유한대학교 학생복지팀 · AI 활용 사례 공유 자료 (2026.10.)</p>
+</section>
+
+        <div class="scene-bar" id="sceneBar"></div>
+      </div>
+    </div>
+
+    <div class="caption" aria-live="polite">
+      <span class="cap-scene" id="capScene">표지</span>
+      <span class="cap-text" id="capText">재생 버튼을 누르면 장면과 해설 자막이 순서대로 진행됩니다. 음성 해설을 켜면 자막을 읽어 드립니다.</span>
+    </div>
+    <div class="ctrls">
+      <div class="scrub" id="scrub" role="slider" tabindex="0" aria-label="재생 위치" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="track"></div><div class="fill" id="fill"></div><div id="ticks"></div><div class="knob" id="knob"></div>
+      </div>
+      <button class="btn" id="prevBtn" type="button" aria-label="이전 장면"><svg viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+      <button class="btn primary" id="playBtn" type="button"><svg viewBox="0 0 24 24" id="playIco"><path d="M7 4v16l13-8z"/></svg><span id="playLbl">재생</span></button>
+      <button class="btn" id="nextBtn" type="button" aria-label="다음 장면"><svg viewBox="0 0 24 24"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+      <span class="time" id="time">0:00 / 0:00</span>
+      <span class="spacer"></span>
+      <button class="btn" id="rateBtn" type="button" aria-label="재생 속도">1×</button>
+      <button class="btn" id="voiceBtn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9zm13.5 3A4.5 4.5 0 0 0 14 8v8a4.5 4.5 0 0 0 2.5-4z"/></svg><span class="t-hide">음성 해설</span></button>
+      <button class="btn" id="fsBtn" type="button" aria-label="전체 화면"><svg viewBox="0 0 24 24"><path d="M4 4h6v2H6v4H4zm10 0h6v6h-2V6h-4zM4 14h2v4h4v2H4zm14 0h2v6h-6v-2h4z"/></svg><span class="t-hide">전체 화면</span></button>
+      <span class="voice-note" id="voiceNote"></span>
+    </div>
+  </div>
+
+  <nav class="chapters" id="chapters" aria-label="장면 바로가기"></nav>
+
+  <section class="script">
+    <h2>해설 대본 전체</h2>
+    <p>영상에 나오는 자막을 장면별로 모았습니다. 시간 버튼을 누르면 그 장면으로 이동합니다. 교육 자료나 발표 원고로 그대로 쓰셔도 됩니다.</p>
+    <ol id="scriptList"></ol>
+  </section>
+
+  <footer>유한대학교 학생복지팀 · AI 활용 사례 공유 자료 (2026.10.) · 화면 예시와 재고 숫자는 이해를 돕기 위한 예시입니다.</footer>
+</div>
+
+<script>
+/* 장면별 해설 자막: [장면 안의 시각(초), 문장] */
+const CAPS={
+cover:[[0,'유한대학교 학생복지팀이 교직원 여러분께 AI 활용 사례를 소개합니다. 제목 그대로, 코딩을 몰라도 말로 만든 학생 서비스 네 가지입니다.'],
+ [5,'개발자가 아닌 행정 담당자가 AI, Claude와 대화하며 만든 앱입니다. 유한봇, 웰니스스테이션, 천원의 아침밥, 천원매점.'],
+ [11.5,'사용한 도구는 Claude, 구글 스프레드시트, 구글 Apps Script, GitHub Pages 네 가지입니다. 모두 무료 서비스 위에서 운영하고 있습니다.']],
+agenda:[[0,'이 앱들이 어떻게 만들어졌고, 어떻게 하나의 앱처럼 이어져 있는지 순서대로 보여드리겠습니다.'],
+ [4,'AI에게 일을 맡기는 방식, 제작 순서, 실제 프롬프트, 공통 구조, 앱별 기능, 연계 방식, 검증 과정, 그리고 우리 부서에서 시작하는 방법까지 여덟 부분입니다.']],
+roles:[[0,'먼저, AI에게 일을 맡긴다는 것이 무엇인지부터 보겠습니다. AI는 말로 설명하면 결과물을 만들어 주는 동료에 가깝습니다.'],
+ [5,'첫째, 우리가 하는 일은 말로 요청하는 것입니다. “학생이 휴대폰으로 신청하고, 나는 관리자 화면에서 승인하고 싶어”처럼 업무를 그대로 설명합니다. 이 요청문을 프롬프트라고 부릅니다.'],
+ [11,'둘째, AI는 화면을 만드는 HTML, 서버 역할을 하는 Apps Script 코드, 설치 순서와 매뉴얼까지 만들어 줍니다. 오류를 찾아 고치고 시험해 보는 일도 시킬 수 있습니다.'],
+ [18,'셋째, 다시 우리가 확인하고 결정합니다. 실제로 눌러 보고, 개인정보 동의 문구처럼 책임이 따르는 내용은 담당자가 직접 정합니다.'],
+ [24,'이상한 점이 보이면 다시 말로 요청합니다. 이 세 단계를 고쳐질 때까지 반복하는 것이 AI와 일하는 방식입니다.']],
+chat:[[0,'실제로 담당자가 보낸 요청을 보겠습니다. 오타만 고쳤고 말투는 그대로입니다. 평소 동료에게 말하듯 써도 충분합니다.'],
+ [3,'“실시간 승인 화면에서 마지막에 신청한 학생이 맨 밑에 나와서 승인할 때 불편하다. 신청순, 최신순으로 볼 수 있게 넣어 달라.” 무엇이, 왜 불편한지가 들어 있습니다.'],
+ [13,'Claude는 천원의 아침밥 관리자 화면에 최신순·신청순 정렬을 넣었다고 답했습니다.'],
+ [17,'오른쪽은 이해를 돕기 위한 화면 예시입니다. 지금은 신청순이라 가장 늦게 신청한 학생이 맨 아래에 있습니다.'],
+ [21,'최신순으로 바꾸면 방금 신청한 학생이 맨 위로 올라옵니다. 순서를 바꿔도 신청 번호는 그대로 유지됩니다.'],
+ [27,'새 신청자는 5초 간격 갱신으로 자동으로 나타납니다. 이렇게 불편한 점을 구체적으로 말할수록 결과가 정확해집니다.']],
+steps:[[0,'다음은 한 앱이 요청부터 운영까지 만들어지는 순서입니다. 네 개 앱 모두 이 일곱 단계로 만들고 고쳤습니다. 흰색은 담당자, 보라색은 AI가 하는 단계입니다.'],
+ [5,'1단계, 담당자가 업무를 말로 정리해 요청합니다. 누가 쓰는지, 무엇을 입력받는지, 관리자는 무엇을 보고 싶은지. 이 세 가지를 적어 Claude에 보냅니다.'],
+ [13,'2단계, AI가 파일 세 개를 만들어 줍니다. 학생 화면, 관리자 화면, 그리고 서버 코드인 Code.gs입니다. 각 파일을 어디에 붙여넣는지 설명도 함께 받습니다.'],
+ [21,'3단계, 담당자가 구글 시트에 서버를 붙여넣습니다. 새 스프레드시트를 열고 확장 프로그램, Apps Script로 들어가 코드를 붙여넣은 뒤, 웹 앱으로 배포하면 …/exec로 끝나는 서버 주소를 받습니다. 이 시트가 곧 데이터 저장소가 됩니다.'],
+ [31,'4단계, 화면을 인터넷에 올립니다. 화면 파일에 서버 주소를 넣고 GitHub Pages에 올리면, 학생이 휴대폰으로 열 수 있는 주소가 생깁니다.'],
+ [39,'5단계, 직접 써 보고 불편한 점을 다시 요청합니다. 목록 정렬, 여러 기기 동시 승인, 재고 집계처럼 운영하면서 생긴 불편을 그때그때 말로 요청해 고쳤습니다.'],
+ [47,'6단계, AI에게 전체 검토와 보안 점검을 시킵니다. 구글 서비스를 흉내 낸 시험 환경에서 자동 테스트를 돌려, 통과한 뒤에 반영했습니다.'],
+ [55,'7단계, 매뉴얼과 다른 대학용 키트입니다. 비전공자용 그림 매뉴얼, 똑같이 다시 만드는 재현 프롬프트, 다른 대학이 설치할 수 있는 기본 세트까지 AI가 만들었습니다.']],
+anatomy:[[0,'이제 실제 프롬프트를 보겠습니다. 천원의 아침밥을 처음부터 다시 만들 때 쓰도록 정리한 재현 프롬프트의 공통 안내 부분입니다.'],
+ [12,'첫째, 역할과 내 수준을 먼저 알려 줍니다. “너는 웹 개발자, 나는 비전공자”라고 밝히면 AI가 설명의 눈높이를 맞춥니다.'],
+ [18,'둘째, 결과물의 모양을 정해 줍니다. 학생 화면, 관리자 화면, 서버, 이렇게 파일 세 개와 각 역할을 정해 두면 빠지는 화면이 없습니다.'],
+ [24,'셋째, 보안 원칙을 미리 못 박습니다. 관리자 비밀번호는 화면 코드에 절대 쓰지 않고, 학생 화면의 검사는 우회될 수 있으니 서버에서도 같은 검사를 반드시 하게 합니다.'],
+ [31,'넷째, 정직하게 일하도록 정합니다. 모르는 것은 지어내지 말고 물어보게 하고, 테스트하지 않은 것을 테스트했다고 말하지 않게 합니다.'],
+ [38,'다섯째, 내가 할 일을 초보자 눈높이로 번호를 붙여 설명하게 합니다. 설치와 배포처럼 사람이 해야 하는 일을 순서대로 받을 수 있습니다.']],
+results1:[[0,'운영 중에 보낸 보완 요청과 그 결과입니다.'],
+ [2.5,'천원의 아침밥에는 두 가지를 요청했습니다. 코드 전반의 오류와 버그를 검토해 달라는 것, 그리고 천원매점처럼 어디에서 승인해도 연동되고 비밀번호가 밖으로 노출되지 않게 보안을 보완해 달라는 것입니다.'],
+ [11,'결과로 최신순·신청순 정렬, 여러 기기 승인 시 5초 간격 상태 연동, 화면에 있던 PIN을 없애고 서버에서 비밀번호를 확인하는 방식, 그리고 신청시간이 1899년 12월 30일로 보이던 오류 수정이 반영되었습니다.'],
+ [23,'웰니스스테이션은 새로 설명하지 않았습니다. 천원의 아침밥에서 한 검토·보완 작업을 똑같이 적용해 달라고만 요청했습니다.'],
+ [30,'그 결과, 로그인 없이 명단 조회·승인·삭제가 되던 문제를 막고, 오전 9시 이전에 날짜가 전날로 잡히던 오류를 고쳤습니다. 추정치로 그리던 시설별 통계는 실제 집계값으로 바꾸고, 학년도 종료 후 성명과 학번을 지우는 비식별화 기능도 넣었습니다.']],
+wellphone:[[0,'화면도 말로 설계합니다. 왼쪽은 웰니스스테이션 학생 화면을 위한 재현 프롬프트이고, 오른쪽은 그 문장이 화면으로 바뀌는 모습입니다.'],
+ [3,'상단 헤더와 안내띠의 문구를 그대로 적어 줍니다. “신청 후 관리자 승인 후 이용 가능합니다, 평일 9시부터 17시 40분까지.”'],
+ [10,'카드 1은 기본 정보입니다. 사용 날짜는 오늘로 고정하고, 학과, 숫자 9자리 학번, 성명을 받습니다.'],
+ [15,'카드 2는 희망 이용 시설입니다. 2×2 큰 체크 카드 네 개로, 인생네컷, 코인노래방, 탁구장, 헬스장을 고릅니다.'],
+ [19,'카드 3은 이용 시간입니다. 출입 시간은 현재 시각으로 자동 입력되고, 퇴실 시간은 관리자 전용입니다.'],
+ [23,'카드 4는 개인정보 수집·이용 동의입니다. 동의함을 고르지 않으면 신청이 전송되지 않도록 규칙까지 문장으로 적었습니다.']],
+store:[[0,'천원매점에는 한 번의 요청에 네 가지를 담았습니다. 2026년 10월 12일에 보낸 원문 그대로입니다.'],
+ [2,'먼저 천원의 아침밥과 웰니스스테이션에서 했던 검토와 기능 개선을 똑같이 실행해 달라고 했습니다.'],
+ [7,'첫째, 지금 쓰는 도구를 똑같이 다시 만들려면 프롬프트를 어떻게 써야 하는지 물었습니다.'],
+ [13,'둘째, 다른 대학 직원도 같은 형태로 천원매점 프로그램을 쓸 수 있게 깃허브 기본 셋팅 파일을 요청했습니다.'],
+ [19,'셋째, 비전공자도 프롬프트부터 실제 사용까지 따라 할 수 있는 HTML 매뉴얼을 요청했습니다.'],
+ [25,'그리고 보완 요청으로, 진열 재고를 기준으로 오늘 남은 재고량을 입력하면 오늘 판매량이 나오는 재고관리 탭을 추가하고, 다른 탭도 함께 점검해 달라고 했습니다.'],
+ [31,'결과로 재고관리(마감) 탭이 새로 생겼고, 확정한 숫자는 판매실적, 재고현황, 일일 리포트, 발주 예측에 반영됩니다. 새 학교 설치 시 시트 생성이 중간에 멈추던 오류도 고쳤고, 재현 프롬프트와 다른 대학용 키트, 초보자용 매뉴얼도 받았습니다.']],
+formula:[[0,'재고관리(마감) 탭의 계산은 간단합니다. 마감 때 남은 수량만 세어 입력하면 됩니다. 화면의 숫자는 이해를 돕는 예시입니다.'],
+ [3,'아침에 진열한 수량이 30개이고, 중간에 10개를 보충했습니다.'],
+ [10,'마감 때 남은 수량이 12개라면,'],
+ [14,'시작 진열 더하기 보충, 빼기 마감 잔여. 오늘 판매량은 28개로 자동 계산됩니다.'],
+ [19,'확정 버튼을 누르면 이 숫자가 판매실적, 재고현황, 일일 리포트, 발주 예측에 한꺼번에 반영됩니다.']],
+reproduce:[[0,'앞의 요청에서 “완벽하게 일치하는 프롬프트”를 달라고 했던 부분에 대한 답이 흥미롭습니다.'],
+ [2,'AI는 글자 하나까지 같은 코드는 보장할 수 없다고 솔직하게 답했습니다. 같은 요청을 해도 AI가 쓰는 코드는 매번 조금씩 다를 수 있기 때문입니다.'],
+ [8,'대신 두 가지 방법을 제시했습니다. 방법 A, 파일 첨부형은 지금 쓰는 파일을 그대로 첨부해 같은 파일에서 출발하는 방식입니다.'],
+ [13,'방법 B, 명세형은 기능과 화면을 글로 자세히 적어 같은 기능을 새로 만드는 방식입니다. 코드는 달라도 쓰는 방법은 같습니다.'],
+ [19,'그리고 재현 프롬프트는 서버, 학생 화면, 관리자 화면, 검증의 네 단계로 나눠 한 단계씩 요청하도록 구성했습니다.']],
+botprompt:[[0,'유한봇의 담당자용 대시보드를 만들 때 쓴 재현 프롬프트입니다. 로그인 창, 필요한 탭 목록, 학생 입력은 글자로만 표시, CSV 내보내기까지 한 줄씩 적었습니다.'],
+ [9,'중요한 것은 마지막의 검증 요청입니다. 만든 파일을 체크리스트로 스스로 점검하고, 통과와 실패를 표로 알려 달라고 했습니다.'],
+ [13,'구글 서버에서 직접 실행해 보지 못한 항목은 “실제 환경에서 확인 필요”로 따로 표시하게 했습니다. 이렇게 하면 무엇이 확인됐고 무엇이 남았는지 분명해집니다.'],
+ [22,'결과로 공지사항에 시작일과 종료일을 지정하는 예약 게시가 생겼고, 질문 속 전화번호, 이메일, 학번 형태의 숫자는 자동으로 가려집니다. 로그인 없이 질문 기록이 보이던 문제를 막고, 전자출결과 공결안내 질문 분류 오류도 고쳤습니다.']],
+arch:[[0,'네 개 앱은 모두 같은 뼈대를 씁니다. 별도 서버나 유료 서비스 없이, 학교 업무에서 이미 쓰는 구글 시트를 데이터 저장소로 씁니다.'],
+ [3,'첫째는 화면입니다. 학생 화면과 관리자 화면을 HTML로 만들고, GitHub Pages에 올려 주소로 엽니다.'],
+ [7,'둘째는 서버입니다. Code.gs 한 파일이 화면의 요청을 받아 신청 내용을 검사해 저장하고, 관리자 비밀번호를 확인합니다.'],
+ [12,'셋째는 구글 스프레드시트입니다. 서버가 기록하고 읽어 오는 곳으로, 신청 목록, 승인 기록, 설정이 시트 탭마다 쌓입니다.'],
+ [20,'자주 나오는 용어도 정리해 두겠습니다. 프롬프트는 AI에게 보내는 요청 글, Apps Script는 구글 시트에 붙어 돌아가는 작은 프로그램, GitHub Pages는 HTML 파일을 무료로 인터넷 주소로 만들어 주는 곳입니다.'],
+ [30,'PWA는 휴대폰 홈 화면에 앱처럼 설치되는 웹페이지, 배포는 만든 서버를 인터넷에서 부를 수 있게 켜는 일, 토큰은 로그인에 성공하면 받는 임시 출입증입니다.']],
+apps:[[0,'이제 각 앱이 하는 일을 하나씩 보겠습니다.'],
+ [2,'유한봇은 2026 슬기로운 유한대학 생활 안내 앱입니다. 학생은 학사, 장학, 시설 안내를 탭으로 보고 챗봇에 질문하며, 휴대폰 홈 화면에 설치할 수도 있습니다.'],
+ [8,'담당자는 질문 수와 성공률, 답변 실패 목록, 방문자 통계를 보고 공지를 작성합니다. 매주 월요일과 매월 1일 아침 7시에 이용 보고 메일이 자동으로 옵니다. 외부 AI 요금이 들지 않는 규칙 기반 챗봇이라는 점도 특징입니다.'],
+ [14,'웰니스스테이션은 학생회관 4층의 인생네컷, 코인노래방, 탁구장, 헬스장 이용을 신청받습니다. 학생은 당일 이용을 신청하고 승인을 기다립니다.'],
+ [19,'담당자는 승인과 거부, 노래방 룸 배정, 퇴실 입력을 하고, 30초마다 갱신되는 실시간 이용현황과 시설·학과·시간대 통계를 봅니다.'],
+ [25,'천원의 아침밥은 학생이 휴대폰으로 신청하고, 남은 수량을 확인하며, 개인정보 동의와 계좌 안내를 받습니다. 담당자는 여러 기기에서 동시에 실시간 승인을 하고, 통계와 서명부, 식단과 시간을 관리합니다.'],
+ [31,'개인정보는 성명, 학과, 학번을 사업 종료 시까지 1년간 보유하고, 종료 후에는 성명과 학번을 지우고 학과 통계만 남길 예정입니다.'],
+ [36,'천원매점은 2026년 9월 3일 교내에 문을 열어 12월까지 운영할 예정입니다. 학생은 신청 후 현장에서 수령하고, 간편 신청 모드, 꾸러미 데이, 드리미 서비스를 지원합니다.'],
+ [42,'담당자 화면에는 실시간 승인, 재고현황, 재고관리 마감, 일일 리포트, 품목·학과 분석, 수령확인부, 발주관리, 설정 등 탭이 열두 개 있습니다.']],
+link:[[0,'네 앱이 어떻게 하나의 앱처럼 이어지는지 보겠습니다. 세 앱은 각각 따로 만든 뒤, 유한봇 안에 연결했습니다.'],
+ [2,'학생은 휴대폰으로 유한봇 하나만 열면 됩니다. 유한봇 안에는 웰니스 현황 탭, 천원의 아침밥 버튼, 천원매점 현황 버튼이 있습니다.'],
+ [9,'웰니스 현황 탭은 웰니스스테이션 서버에 시설별 이용 상황을 물어서 보여줍니다.'],
+ [15,'챗봇의 아침밥 버튼을 누르면 천원의 아침밥 서버에서 현황을 받아 안내하고, 그대로 아침밥 신청 화면으로 이어집니다.'],
+ [21,'천원매점 버튼은 매점 서버의 공개 통계, 즉 오늘 판매량과 남은 수량을 받아 실시간 현황을 보여줍니다.'],
+ [27,'유한봇 자신의 서버와 시트에는 질문, 탭 클릭, 방문 기록과 공지가 저장됩니다.'],
+ [31,'이 기록을 모아 담당자에게 주간·월간 보고서 메일을 자동으로 보냅니다.'],
+ [36,'이 구조에는 세 가지 장점이 있습니다. 먼저, 각 앱의 서버가 따로라서 한 앱을 고치거나 멈춰도 다른 앱에는 영향이 없습니다.'],
+ [41,'둘째, 유한봇은 학생에게 공개해도 되는 현황만 받아 옵니다. 명단 같은 정보는 각 앱의 관리자 화면에서 로그인해야만 볼 수 있습니다.'],
+ [46,'셋째, 유한봇에서 서버 주소를 비워 두면 해당 버튼이 화면에서 숨겨집니다. 그래서 다른 대학은 필요한 앱만 골라 연결할 수 있습니다.']],
+verify:[[0,'AI가 만든 것을 AI로 다시 검증했습니다. 처음 만든 앱은 잘 돌아갔지만, 전체 검토를 요청하자 눈에 보이지 않던 문제가 나왔습니다.'],
+ [4,'첫째, 관리자 PIN이 화면 코드에 그대로 보였습니다. 비밀번호는 구글 서버에만 보관하고 서버에서 확인하도록 바꿨습니다. 로그인은 6시간 유지되고, 10회 틀리면 10분간 잠깁니다.'],
+ [12,'둘째, 서버 주소만 알면 로그인 없이 명단을 조회할 수 있었습니다. 이제 로그인 출입증인 토큰이 없으면 명단, 승인, 설정 요청을 모두 거절합니다.'],
+ [19,'셋째, 입력칸에 넣은 글자가 관리자 화면에서 프로그램처럼 실행될 위험이 있었습니다. 모든 입력값을 글자로만 표시하도록 바꿨습니다.'],
+ [27,'넷째, 학생 화면에만 검사가 있고 서버 검사가 없었습니다. 이제 서버에서도 당일 날짜, 신청 시간, 학번 9자리, 중복 신청을 다시 검사합니다.'],
+ [35,'다섯째, 개인정보 동의 절차가 없었습니다. 이제 동의해야 신청할 수 있고, 동의 일시가 기록되며, 사업이 끝나면 비식별화할 수 있습니다.']],
+tests:[[0,'고친 뒤에는 구글 서비스를 흉내 낸 시험 환경에서 자동 테스트를 돌리고, 통과한 뒤 배포했습니다.'],
+ [2,'웰니스스테이션 90건, 천원의 아침밥 89건, 천원매점 114건, 유한봇 66건이 통과했습니다.'],
+ [12,'네 앱을 합치면 359건입니다.'],
+ [16,'다만 이 테스트는 시험 환경 기준입니다. 권한 승인 창, 실제 배포, 메일 발송처럼 실제 구글에서만 확인되는 항목은 별도 점검표로 담당자가 직접 확인했습니다.']],
+tips:[[0,'마지막으로, 우리 부서에서 시작해 보려면 어떻게 하면 좋을지 정리했습니다. 이번 작업에서 효과가 컸던 요청 방식 여섯 가지입니다.'],
+ [3,'하나, 업무 흐름을 먼저 말하세요. 누가 입력하고, 누가 확인하고, 무엇을 집계하는지. 화면 모양보다 업무 순서가 먼저입니다.'],
+ [10,'둘, 한 번에 다 시키지 마세요. 서버, 학생 화면, 관리자 화면, 검증처럼 단계를 나눠 요청하면 빠지는 기능이 줄어듭니다.'],
+ [17,'셋, “지어내지 말고 물어봐”를 넣으세요. 모르는 정보는 질문하게 하고, 테스트하지 않은 것은 했다고 말하지 말라고 미리 정해 둡니다.'],
+ [24,'넷, 검토를 따로 요청하세요. 만든 뒤에 “전반적으로 오류나 버그가 없는지 검토 및 분석”처럼 점검만 따로 시키면 숨은 문제가 드러납니다.'],
+ [32,'다섯, 책임 있는 문구는 직접 정하세요. 개인정보 보유 기간과 동의 문구는 담당 부서 기준으로 사람이 정해서 넣습니다.'],
+ [40,'여섯, 잘 된 방식을 재사용하세요. “천원의 아침밥에서 한 작업을 똑같이 해 줘”처럼 앞선 작업을 기준으로 삼으면 다음 앱이 훨씬 빨라집니다.']],
+end:[[0,'코딩 지식보다 업무를 정확히 아는 것이 더 중요했습니다. 우리 학교 다른 부서도 같은 방식으로 시작할 수 있습니다.'],
+ [5,'각 앱에는 설치 안내, 재현 프롬프트, 그림 매뉴얼, 설치 후 점검표로 이루어진 기본 세트가 있습니다.'],
+ [11,'학교명, 계좌, 서버 주소는 비워 두었으니 필요한 부서는 학생복지팀에 문의해 주세요. 끝까지 봐 주셔서 감사합니다.']]
+};
+
+(function(){
+  const vp=document.getElementById('vp'), stage=document.getElementById('stage'), player=document.getElementById('player');
+  const $=id=>document.getElementById(id);
+  const S=[...stage.querySelectorAll('.sc')].map(el=>{
+    // 순차 등장 자식에 번호 부여
+    el.querySelectorAll('.stag').forEach(g=>[...g.children].forEach((c,i)=>c.style.setProperty('--k',i)));
+    // 코드 줄 강조 대상 연결
+    const lines=[...el.querySelectorAll('.code .ln')];
+    const types=[...el.querySelectorAll('[data-type]')].map(e=>{const f=e.textContent;e.textContent='';return {e,f,at:+e.dataset.at,cps:+(e.dataset.cps||12),n:-1}});
+    const counts=[...el.querySelectorAll('[data-count]')].map(e=>({e,at:+e.dataset.at,v:+e.dataset.count,last:null}));
+    const items=[...el.querySelectorAll('[data-at]')].map(e=>({e,at:+e.dataset.at,to:e.dataset.to!==undefined?+e.dataset.to:Infinity,tg:e.dataset.toggle||null}));
+    return {el,id:el.dataset.id,title:el.dataset.title,dur:+el.dataset.dur,items,types,counts,lines,caps:CAPS[el.dataset.id]||[]};
+  });
+  let acc=0; S.forEach(s=>{s.start=acc;acc+=s.dur}); const TOTAL=acc;
+
+  function applyToggle(s,tg,on){
+    const [target,cls]=tg.split(':');
+    if(target[0]==='@'){ // @ln3-5 → 코드 줄 3~5
+      const m=target.match(/@ln(\d+)(?:-(\d+))?/); const a=+m[1], b=m[2]?+m[2]:a;
+      s.lines.forEach(l=>{const n=+l.dataset.n; if(n>=a&&n<=b) l.classList.toggle(cls,on)});
+    } else { const t=document.getElementById(target); if(t) t.classList.toggle(cls,on); }
+  }
+
+  let t=0, playing=false, poster=true, rate=1, curK=-1, capK=-1, ended=false;
+  const fmt=x=>{x=Math.max(0,Math.floor(x));return Math.floor(x/60)+':'+String(x%60).padStart(2,'0')};
+  const sceneAt=x=>{for(let i=S.length-1;i>=0;i--) if(x>=S[i].start) return i; return 0};
+  const ease=p=>1-Math.pow(1-p,3);
+
+  function resetScene(s){
+    s.items.forEach(it=>{it.e.classList.remove('in'); if(it.tg) applyToggle(s,it.tg,false)});
+    s.types.forEach(ty=>{ty.e.textContent='';ty.n=-1;ty.e.classList.remove('caret')});
+    s.counts.forEach(c=>{c.e.textContent='0';c.last=null});
+  }
+
+  function render(){
+    const k=sceneAt(t), s=S[k];
+    let local=t-s.start; if(poster&&k===0) local=s.dur-0.01;
+    if(k!==curK){ if(curK>=0){S[curK].el.classList.remove('cur'); resetScene(S[curK]);} s.el.classList.add('cur'); curK=k; capK=-1; onScene(k); }
+    for(const it of s.items){
+      const on=local>=it.at&&local<it.to;
+      if(on!==it.e.classList.contains('in')){ it.e.classList.toggle('in',on); if(it.tg) applyToggle(s,it.tg,on); }
+    }
+    for(const ty of s.types){
+      const n=Math.max(0,Math.min(ty.f.length,Math.floor((local-ty.at)*ty.cps)));
+      if(n!==ty.n){ty.n=n;ty.e.textContent=ty.f.slice(0,n);ty.e.classList.toggle('caret',n>0&&n<ty.f.length);}
+    }
+    for(const c of s.counts){
+      const p=Math.max(0,Math.min(1,(local-c.at)/1.4)); const v=Math.round(c.v*ease(p));
+      if(v!==c.last){c.last=v;c.e.textContent=v;}
+    }
+    // 자막
+    let ci=-1; s.caps.forEach((c,i)=>{if(local>=c[0]) ci=i});
+    if(!poster&&ci!==capK){ capK=ci; if(ci>=0){ $('capText').textContent=s.caps[ci][1]; speak(s.caps[ci][1]); } }
+    // 진행 표시
+    const pct=t/TOTAL*100;
+    $('fill').style.width=pct+'%'; $('knob').style.left=pct+'%';
+    $('scrub').setAttribute('aria-valuenow',Math.round(pct)); $('scrub').setAttribute('aria-valuetext',fmt(t)+' / '+fmt(TOTAL));
+    $('sceneBar').style.width=(poster?0:Math.min(100,local/s.dur*100))+'%';
+    $('time').textContent=fmt(t)+' / '+fmt(TOTAL);
+  }
+
+  function onScene(k){
+    $('hudR').textContent=String(k+1).padStart(2,'0')+' / '+String(S.length).padStart(2,'0');
+    $('capScene').textContent=(k+1)+'. '+S[k].title;
+    document.querySelectorAll('.chap-btn').forEach((b,i)=>{b.classList.toggle('on',i===k); if(i===k) b.setAttribute('aria-current','true'); else b.removeAttribute('aria-current');});
+  }
+
+  /* ── 음성 해설 (브라우저 내장 음성) ── */
+  const synth=('speechSynthesis' in window)?window.speechSynthesis:null;
+  let voiceOn=false, speaking=false, speakStart=0, speakLen=0, curU=null;
+  function koVoice(){ try{return synth.getVoices().find(v=>/^ko/i.test(v.lang))||null}catch(e){return null} }
+  function speak(text){
+    if(!voiceOn||!synth||!playing) return;
+    try{
+      synth.cancel();
+      const u=new SpeechSynthesisUtterance(text.replace(/[“”"]/g,''));
+      u.lang='ko-KR'; const v=koVoice(); if(v) u.voice=v; u.rate=Math.min(2,1.05*rate);
+      u.onend=u.onerror=()=>{ if(curU===u) speaking=false; };
+      curU=u; speaking=true; speakStart=performance.now(); speakLen=text.length; synth.speak(u);
+    }catch(e){ speaking=false; }
+  }
+  function stopVoice(){ speaking=false; curU=null; try{synth&&synth.cancel()}catch(e){} }
+  // 음성이 켜져 있으면 문장을 다 읽을 때까지 다음 자막으로 넘어가지 않는다
+  function holdLimit(){
+    const k=sceneAt(t), s=S[k]; const next=s.caps[capK+1]; return s.start+(next?next[0]:s.dur)-0.02;
+  }
+
+  /* ── 재생 루프 ── */
+  let last=performance.now();
+  function frame(now){
+    const dt=Math.min(.1,(now-last)/1000)*rate; last=now;
+    if(playing){
+      if(speaking && (now-speakStart)/1000 > speakLen*0.22/rate+5) speaking=false; // 음성 엔진이 멈췄을 때 대비
+      let nt=t+dt;
+      if(voiceOn&&speaking){ const lim=holdLimit(); if(nt>lim) nt=Math.max(t,lim); }
+      t=nt;
+      if(t>=TOTAL){ t=TOTAL-0.001; ended=true; pause(); }
+      render();
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function setPlayUI(){
+    $('playLbl').textContent=playing?'일시정지':(ended?'다시 보기':'재생');
+    $('playIco').innerHTML=playing?'<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>':(ended?'<path d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7z"/>':'<path d="M7 4v16l13-8z"/>');
+  }
+  function play(){ if(ended){t=0;ended=false;} if(poster){poster=false; curK=-1; S.forEach(resetScene); t=0;} playing=true; capK=-1; last=performance.now(); setPlayUI(); render(); }
+  function pause(){ playing=false; stopVoice(); setPlayUI(); }
+  function seek(x){ t=Math.max(0,Math.min(TOTAL-0.001,x)); ended=false; if(poster){poster=false;} stopVoice(); capK=-1;
+    const k=sceneAt(t); if(k===curK){ resetScene(S[k]); } render(); }
+  function goScene(k){ k=Math.max(0,Math.min(S.length-1,k)); seek(S[k].start); if(!playing) play(); }
+
+  $('playBtn').addEventListener('click',()=>playing?pause():play());
+  $('prevBtn').addEventListener('click',()=>{const k=sceneAt(t); const local=t-S[k].start; goScene(local>2?k:k-1);});
+  $('nextBtn').addEventListener('click',()=>goScene(sceneAt(t)+1));
+  const rates=[1,1.25,1.5,0.75]; let ri=0;
+  $('rateBtn').addEventListener('click',()=>{ri=(ri+1)%rates.length; rate=rates[ri]; $('rateBtn').textContent=rate+'×'; if(speaking){capK=-1}});
+  $('voiceBtn').addEventListener('click',()=>{
+    if(!synth){ $('voiceNote').textContent='이 브라우저는 음성 해설을 지원하지 않습니다. 자막으로 진행됩니다.'; return; }
+    voiceOn=!voiceOn; $('voiceBtn').setAttribute('aria-pressed',String(voiceOn));
+    if(voiceOn){
+      const v=koVoice();
+      $('voiceNote').textContent=v?'음성 해설이 켜졌습니다. 문장을 다 읽은 뒤 다음 장면으로 넘어갑니다.':'음성 해설이 켜졌습니다. 기기에 한국어 음성이 없으면 소리가 나지 않을 수 있습니다.';
+      capK=-1; if(!playing) play(); else render();
+    } else { stopVoice(); $('voiceNote').textContent=''; }
+  });
+  if(synth){ try{synth.getVoices(); synth.addEventListener&&synth.addEventListener('voiceschanged',()=>{});}catch(e){} }
+
+  $('fsBtn').addEventListener('click',()=>{
+    try{
+      if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+      else if(player.requestFullscreen) player.requestFullscreen().catch(()=>{$('voiceNote').textContent='이 화면에서는 전체 화면을 쓸 수 없습니다.';});
+      else $('voiceNote').textContent='이 화면에서는 전체 화면을 쓸 수 없습니다.';
+    }catch(e){}
+  });
+
+  // 진행 막대: 클릭·끌기·키보드
+  const scrub=$('scrub');
+  const posToT=e=>{const r=scrub.getBoundingClientRect(); return (e.clientX-r.left)/r.width*TOTAL};
+  let dragging=false, wasPlaying=false;
+  scrub.addEventListener('pointerdown',e=>{dragging=true; wasPlaying=playing; if(playing){playing=false;stopVoice();} scrub.setPointerCapture(e.pointerId); seek(posToT(e));});
+  scrub.addEventListener('pointermove',e=>{if(dragging) seek(posToT(e));});
+  const endDrag=()=>{ if(!dragging) return; dragging=false; if(wasPlaying) play(); else setPlayUI(); };
+  scrub.addEventListener('pointerup',endDrag); scrub.addEventListener('pointercancel',endDrag);
+  scrub.addEventListener('keydown',e=>{ if(e.key==='ArrowRight'){seek(t+5);e.preventDefault();} else if(e.key==='ArrowLeft'){seek(t-5);e.preventDefault();} });
+  document.addEventListener('keydown',e=>{
+    if(e.target.closest&&e.target.closest('button,[role="slider"],input,textarea')) return;
+    if(e.key===' '){ e.preventDefault(); playing?pause():play(); }
+    else if(e.key==='ArrowRight'){ goScene(sceneAt(t)+1); }
+    else if(e.key==='ArrowLeft'){ goScene(sceneAt(t)-1); }
+  });
+
+  // 장면 표시: 진행 막대 눈금, 장면 버튼, 전체 대본
+  const ticks=$('ticks'), chapters=$('chapters'), list=$('scriptList');
+  S.forEach((s,i)=>{
+    if(i>0){const d=document.createElement('span'); d.className='tick'; d.style.left=(s.start/TOTAL*100)+'%'; ticks.appendChild(d);}
+    const b=document.createElement('button'); b.type='button'; b.className='chap-btn';
+    b.innerHTML='<span class="n">'+String(i+1).padStart(2,'0')+'</span>'; b.appendChild(document.createTextNode(s.title));
+    b.addEventListener('click',()=>goScene(i)); chapters.appendChild(b);
+    const li=document.createElement('li'); const h=document.createElement('h3');
+    const jb=document.createElement('button'); jb.type='button'; jb.textContent=fmt(s.start); jb.addEventListener('click',()=>{goScene(i); player.scrollIntoView({behavior:'smooth',block:'start'});});
+    h.appendChild(jb); h.appendChild(document.createTextNode(String(i+1).padStart(2,'0')+'. '+s.title)); li.appendChild(h);
+    s.caps.forEach(c=>{const p=document.createElement('p'); p.textContent=c[1]; li.appendChild(p);}); list.appendChild(li);
+  });
+
+  // 무대 크기 맞춤
+  function fit(){
+    const w=vp.clientWidth, h=vp.clientHeight, sc=Math.min(w/1600,h/900);
+    stage.style.transform='translate('+((w-1600*sc)/2)+'px,'+((h-900*sc)/2)+'px) scale('+sc+')';
+  }
+  try{ new ResizeObserver(fit).observe(vp); }catch(e){ window.addEventListener('resize',fit); }
+  window.__mg={seek:x=>{seek(x);},pause:()=>pause(),S,TOTAL};
+  fit(); setPlayUI(); render(); requestAnimationFrame(frame);
+})();
+</script>
